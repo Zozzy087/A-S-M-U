@@ -27,7 +27,7 @@
   <meta property="og:image" content="./files/icon-512.png">
   
   <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   
   <style>
     body, html {
@@ -74,6 +74,51 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+	
+	/* Telepítési banner */
+#install-banner {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  background: #7f00ff;
+  color: white;
+  text-align: center;
+  padding: 0.75rem;          /* korábbi 12px helyett 0.75rem (~12px) */
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;           /* alap desktop méret: ~16px */
+  line-height: 1.4;
+  z-index: 10000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+/* Az alsó instrukció kisebbíthető */
+#install-banner small {
+  display: block;
+  margin-top: 0.25rem;
+  font-weight: 400;
+  font-size: 0.85em;         /* ~13.5px */
+  opacity: 0.8;
+}
+
+/* Tablet, nagyobb mobil: kicsit nagyobb betű */
+@media (max-width: 768px) {
+  #install-banner {
+    font-size: 1.125rem;     /* ~18px */
+    padding: 1rem;
+  }
+}
+
+/* Nagy monitorokon kicsit kisebb: ne foglaljon túl sok helyet */
+@media (min-width: 1200px) {
+  #install-banner {
+    font-size: 0.9rem;       /* ~14.4px */
+  }
+}
+
+	
   </style>
 </head>
 <body>
@@ -88,9 +133,9 @@
       color: white;
       text-align: center;
       padding: 12px;
-      font-family: 'Aptos', bold;
+      font-family: 'Cinzel', serif;
       z-index: 10000;
-      box-shadow: 0 2px 5px rgba(0,0,0,0);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
       cursor: pointer;
     ">
     📲 Telepítsd az alkalmazást a főképernyőre!<br>
