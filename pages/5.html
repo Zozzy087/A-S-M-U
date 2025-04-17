@@ -18,21 +18,7 @@
       display: none;
     }
 
-    .dice-toggle {
-      position: relative; 
-      z-index: 1000;
-      width: 50px;
-      height: 50px;
-      background: #368B27;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    
     
     .dice-results {
       display: flex;
@@ -103,7 +89,7 @@ akivel belemerülsz a kalandokba és csatákba. Ahhoz, hogy egyedi
 karaktert hozz létre, először meg kell határoznod tulajdonságainak
 kezdő értékeit.</p>
 <!-- Kockadobás widgetek -->
-  <button class="dice-toggle" onclick="toggleDiceWidget()" title="Karaktergenerálás" style="padding: 4px 6px;">
+  <button onclick="toggleDiceWidget()" title="Karaktergenerálás" style="padding: 4px 6px;">
     <span style="font-size: 25px;">KRAGORN KEZDŐ TULAJDONSÁG ÉRTÉKEI (KATTINTS)</span>
   </button>
   <div id="dice-widget-container"></div>
