@@ -18,7 +18,38 @@
       display: none;
     }
 
-    
+    .dice-toggle {
+  position: relative;
+  z-index: 1000;
+
+  /* ne fix szélesség, csak belső párnázás */
+  width: auto;
+  padding: 0.75rem 1rem;
+
+  /* állíts be egy kényelmes betűméretet */
+  font-size: 1rem;
+  font-family: 'Cinzel', serif;  /* vagy Roboto, ha azt választod */
+  font-weight: 700;
+
+  background: #368B27;
+  color: white;
+  border: none;
+  border-radius: 5px;  /* kerekített téglalap */
+
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;  /* egy sorban maradjon */
+}
+
+/* Ha mobilon esetleg túl hosszú lenne, engedjük tördelni: */
+@media (max-width: 480px) {
+  .dice-toggle {
+    white-space: normal;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+}
+
     
     .dice-results {
       display: flex;
@@ -89,9 +120,10 @@ akivel belemerülsz a kalandokba és csatákba. Ahhoz, hogy egyedi
 karaktert hozz létre, először meg kell határoznod tulajdonságainak
 kezdő értékeit.</p>
 <!-- Kockadobás widgetek -->
-  <button onclick="toggleDiceWidget()" title="Karaktergenerálás" style="padding: 4px 6px;">
-    <span style="font-size: 25px;">KRAGORN KEZDŐ TULAJDONSÁG ÉRTÉKEI (KATTINTS)</span>
-  </button>
+  <button class="dice-toggle" onclick="toggleDiceWidget()" title="KRAGORN KEZDŐ TULAJDONSÁG ÉRTÉKEI (KATTINTS)">
+  KRAGORN KEZDŐ TULAJDONSÁG ÉRTÉKEI (KATTINTS)
+</button>
+
   <div id="dice-widget-container"></div>
   
  
