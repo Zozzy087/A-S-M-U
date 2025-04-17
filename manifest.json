@@ -1,0 +1,21 @@
+{
+  "name": "A Sötét Mágia Útvesztője",
+  "short_name": "Sötét Mágia",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "display_override": ["standalone","minimal-ui"],
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
+  "icons": [
+   
+    {
+      "src": "files/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "description": "Dark fantasy kalandkönyv, ahol a főhős te vagy!"
+}

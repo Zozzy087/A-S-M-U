@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <!-- Meta adatok és stílusok változatlanok maradnak -->
+  <style>
+    /* Frissített CSS a lapozási animációhoz */
+    .stf__wrapper {
+      width: 100vw !important;
+      height: 100vh !important;
+      touch-action: none;
+    }
+
+    .stf__block {
+      width: 100% !important;
+      height: 100% !important;
+      position: relative !important;
+    }
+
+    .page {
+      position: absolute !important;
+      width: 100% !important;
+      height: 100% !important;
+      backface-visibility: hidden;
+      transform-style: preserve-3d;
+    }
+  </style>
+</head>
+<body>
+  <!-- Betöltő és konténerek változatlanok -->
+
+<script>
+// Frissített PageFlip inicializálás
+document.addEventListener("DOMContentLoaded", function() {
+  const pageFlip = new St.PageFlip(document.getElementById("book"), {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    size: "stretch",
+    minWidth: 300,
+    maxWidth: 1000,
+    minHeight: 400,
+    maxHeight: 1400,
+    maxShadowOpacity: 0.5,
+    showCover: true,
+    mobileScrollSupport: true,
+    flippingTime: 800,
+    swipeDistance: 30
+  });
+
+  // Egyszerűsített oldalstruktúra
+  const pages = Array.from({length: 10}, (_, i) => ({
+    type: 'html',
+    path: `pages/oldal-${i+1}.html`,
+    isHard: i === 0 || i === 9
+  }));
+
+  // Tényleges oldalbetöltés
+  pageFlip.loadFromHTML(pages.map(page => {
+    const div = document.createElement('div');
+    div.className = 'page' + (page.isHard ? ' hard-cover' : '');
+    div.innerHTML = `<div class="page-content">Oldal ${pages.indexOf(page)+1}</div>`;
+    return div;
+  }));
+
+  // Eseménykezelők javítva
+  pageFlip.on('flip', e => {
+    document.getElementById('page-indicator').textContent = `Oldal ${e.data+1} / ${pageFlip.getPageCount()}`;
+  });
+
+  // Görgetés érzékelés javítva
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+  }, {passive: true});
+
+  document.addEventListener('touchend', e => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const deltaX = touchEndX - touchStartX;
+    
+    if(Math.abs(deltaX) > 50) {
+      deltaX > 0 ? pageFlip.flipPrev() : pageFlip.flipNext();
+    }
+  }, {passive: true});
+
+  // Billentyűzet kezelés
+  document.addEventListener('keydown', e => {
+    if(e.key === 'ArrowLeft') pageFlip.flipPrev();
+    if(e.key === 'ArrowRight') pageFlip.flipNext();
+  });
+
+  // Betöltés végén
+  setTimeout(() => {
+    document.getElementById('loading').style.display = 'none';
+    pageFlip.update();
+  }, 500);
+});
+</script>
+</body>
+</html>

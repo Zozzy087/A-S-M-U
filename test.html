@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>A Sötét Mágia Útvesztője</title>
+  
+  <!-- PWA beállítások -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta http-equiv="Expires" content="0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-control" content="no-cache">
+  <meta http-equiv="Cache" content="no-cache">
+  
+  <!-- SEO és közösségi média beállítások -->
+  <meta name="description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
+  <meta name="keywords" content="kalandkönyv, interaktív könyv, fantasy, sötét mágia">
+  <link rel="icon" href="files/icon-512.png" type="image/png">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="A Sötét Mágia Útvesztője">
+  <meta property="og:description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
+  <meta property="og:image" content="./files/icon-512.png">
+  
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #323232;
+      font-family: 'Cinzel', serif;
+    }
+    
+    #book {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* StPageFlip stílusok beágyazva */
+    .stf__parent {
+      position: relative;
+      display: block;
+      box-sizing: border-box;
+      transform: translateZ(0);
+      -ms-touch-action: pan-y;
+      touch-action: pan-y;
+    }
+
+    .sft__wrapper {
+      position: relative;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .stf__parent canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      left: 0;
+      top: 0;
+    }
+
+    .stf__block {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      perspective: 2000px;
+    }
+
+    .stf__item {
+      display: none;
+      position: absolute;
+      transform-style: preserve-3d;
+    }
+
+    .stf__outerShadow, .stf__innerShadow, .stf__hardShadow, .stf__hardInnerShadow {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    
+    /* Vezérlők */
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .controls button {
+      padding: 10px 20px;
+      background: black;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    /* Két widget pozícionálása egymás alatt a jobb oldalon */
+#dice-widget-container {
+  position: fixed;
+  bottom: 160px;  /* Feljebb helyezve, hogy alatta legyen hely a másiknak */
+  right: 20px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  padding: 10px;
+  display: none;
+}
+
+#single-dice-widget-container {
+  position: fixed;
+  bottom: 80px;  /* Az 1 kockás dobás lejjebb */
+  right: 20px;   /* Jobb oldalra, ugyanahová mint a másik */
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  padding: 10px;
+  display: none;
+}
+
+.dice-toggle {
+  position: fixed;
+  bottom: 20px; 
+  right: 20px;
+  z-index: 1000;
+  width: 50px;
+  height: 50px;
+  background: #7f00ff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.single-dice-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 80px;  /* A 3 kockás mellett jobbra */
+  z-index: 1000;
+  width: 50px;
+  height: 50px;
+  background: #7f00ff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+	
+    #fullscreen-button {
+      position: fixed;
+      bottom: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1001;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.3s ease;
+    }
+
+    .mute-toggle {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      width: 50px;
+      height: 50px;
+      background: #7f00ff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #page-indicator {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      z-index: 1000;
+      pointer-events: none;
+    }
+    
+    /* Kockadobás widgetek belső stílusai */
+    .dice-title {
+      font-family: 'Cinzel', serif;
+      color: white;
+      background: black;
+      display: inline-block;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .dice-button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      background: #7f00ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(127, 0, 255, 0.5);
+    }
+    
+    .dice-button:hover {
+      background: #a020f0;
+      transform: scale(1.05);
+    }
+    
+    .dice-results {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    #success-results {
+      background: black;
+      color: white;
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Könyv konténer -->
+  <div id="book"></div>
+  
+  <!-- Kockadobás widgetek -->
+  <button class="dice-toggle" onclick="toggleDiceWidget()" title="3 Kockás dobás" style="padding: 4px 6px;">
+    <span style="font-size: 15px;">🎲🎲🎲</span>
+  </button>
+  <div id="dice-widget-container"></div>
+  
+  <button class="single-dice-toggle" onclick="toggleSingleDiceWidget()" title="1 Kockás dobás" style="padding: 4px 6px;">
+    <span style="font-size: 15px;">🎲</span>
+  </button>
+  <div id="single-dice-widget-container"></div>
+
+  <!-- Kockadobás szkriptek -->
+  <script>
+    // 3 kockás widget funkciók
+    function toggleDiceWidget() {
+      const container = document.getElementById('dice-widget-container');
+      if (container.style.display === 'none' || container.style.display === '') {
+        // Másik widget elrejtése, ha látszik
+        document.getElementById('single-dice-widget-container').style.display = 'none';
+        
+        container.style.display = 'block';
+        showDiceRoll();
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
+    function showDiceRoll() {
+      const container = document.getElementById("dice-widget-container");
+      if (!container) return;
+
+      container.innerHTML = `
+          <div style="text-align:center; margin-top:20px;">
+              <h3 class="dice-title">
+                  Harci Kockadobás
+              </h3>
+              <br>
+              <button onclick="rollDice()" class="dice-button">
+                  Dobás
+              </button>
+              <div class="dice-results" id="dice-images"></div>
+              <div id="success-results"></div>
+          </div>
+      `;
+    }
+
+    function rollDice() {
+      const diceImages = {
+          1: 'images/d1.png',
+          2: 'images/d2.png',
+          3: 'images/d3.png',
+          4: 'images/d4.png',
+          5: 'images/d5.png',
+          6: 'images/d6.png'
+      };
+
+      const diceContainer = document.getElementById('dice-images');
+      const successResults = document.getElementById('success-results');
+      diceContainer.innerHTML = '';
+
+      let successes = 0;
+
+      for (let i = 0; i < 3; i++) {
+          const roll = Math.floor(Math.random() * 6) + 1;
+          const img = document.createElement('img');
+          img.src = diceImages[roll];
+          img.alt = `Kocka: ${roll}`;
+          img.style.width = '80px';
+          img.style.height = '80px';
+          diceContainer.appendChild(img);
+
+          if (roll >= 4) {
+              successes++;
+          }
+      }
+
+      let successText = '';
+      switch (successes) {
+          case 0:
+              successText = 'Nincs Siker';
+              break;
+          case 1:
+              successText = 'Egy Siker';
+              break;
+          case 2:
+              successText = 'Két Siker';
+              break;
+          case 3:
+              successText = 'Három Siker';
+              break;
+      }
+
+      successResults.textContent = successText;
+    }
+    
+    // 1 kockás widget funkciók
+    function toggleSingleDiceWidget() {
+      const container = document.getElementById('single-dice-widget-container');
+      if (container.style.display === 'none' || container.style.display === '') {
+        // Másik widget elrejtése, ha látszik
+        document.getElementById('dice-widget-container').style.display = 'none';
+        
+        container.style.display = 'block';
+        showSingleDiceRoll();
+      } else {
+        container.style.display = 'none';
+      }
+    }
+    
+    function showSingleDiceRoll() {
+      const container = document.getElementById("single-dice-widget-container");
+      if (!container) return;
+
+      container.innerHTML = `
+          <div style="text-align:center; margin-top:20px;">
+              <h3 class="dice-title">
+                  1D6 Kockadobás
+              </h3>
+              <br>
+              <button onclick="rollSingleDice()" class="dice-button">
+                  Dobás
+              </button>
+              <div class="dice-results" id="single-dice-image"></div>
+          </div>
+      `;
+    }
+    
+    function rollSingleDice() {
+      const diceImages = {
+          1: 'images/d1.png',
+          2: 'images/d2.png',
+          3: 'images/d3.png',
+          4: 'images/d4.png',
+          5: 'images/d5.png',
+          6: 'images/d6.png'
+      };
+      
+      const diceContainer = document.getElementById('single-dice-image');
+      diceContainer.innerHTML = ''; // Előző kép törlése
+      
+      // 1D6 dobás
+      const roll = Math.floor(Math.random() * 6) + 1;
+      const img = document.createElement('img');
+      img.src = diceImages[roll];
+      img.alt = `Kocka: ${roll}`;
+      img.style.width = '80px';
+      img.style.height = '80px';
+      diceContainer.appendChild(img);
+    }
+  </script>
+
+  <!-- Eredeti StPageFlip könyvtár betöltése -->
+  <link rel="stylesheet" href="css/page-flip.min.css" />
+  <script src="js/page-flip.browser.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const pageFlip = new St.PageFlip(document.getElementById("book"), {
+        width: 550,
+        height: 733,
+        size: "stretch",
+        minWidth: 320,
+        maxWidth: 1000,
+        minHeight: 400,
+        maxHeight: 1533,
+        maxShadowOpacity: 0.5,
+        showCover: true,
+        mobileScrollSupport: false
+      });
+
+      pageFlip.loadFromImages([
+        "images/oldalak/borito.webp",
+        "images/oldalak/elso-oldal.webp",
+        "images/oldalak/masodik-oldal.webp",
+        "images/oldalak/harmadik-oldal.webp",
+        "images/oldalak/negyedik-oldal.webp",
+        "images/oldalak/otodik-oldal.webp",
+        "images/oldalak/hatodik-oldal.webp",
+        "images/oldalak/hetedik-oldal.webp",
+        "images/oldalak/nyolcadik-oldal.webp",
+        "images/oldalak/kilencedik-oldal.webp"
+      ]);
+
+      const flipSound = document.getElementById("flipSound");
+      const fullscreenBtn = document.getElementById("fullscreen-button");
+      const pageIndicator = document.getElementById("page-indicator");
+      const muteButton = document.getElementById("mute-button");
+
+      let isMuted = false;
+
+      // Némítás gomb működése
+      muteButton.addEventListener("click", () => {
+        isMuted = !isMuted;
+        muteButton.textContent = isMuted ? "🔇" : "🔊";
+      });
+
+      // Teljes képernyőre váltás
+      fullscreenBtn.addEventListener("click", () => {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          elem.msRequestFullscreen();
+        }
+      });
+
+      // Ha már fullscreenbe váltott, akkor is tűnjön el a gomb
+      document.addEventListener("fullscreenchange", () => {
+        if (document.fullscreenElement) {
+          fullscreenBtn.style.display = "none";
+        }
+      });
+
+      // Oldalszám frissítése induláskor
+      pageIndicator.textContent = `Oldal 1 / ${pageFlip.getPageCount()}`;
+
+      // Lapozás esemény
+      pageFlip.on('flip', (e) => {
+        if (!isMuted) {
+          flipSound.currentTime = 0;
+          flipSound.play();
+        }
+
+        // Oldalszám frissítése
+        pageIndicator.textContent = `Oldal ${e.data + 1} / ${pageFlip.getPageCount()}`;
+
+        // Teljes képernyős gomb csak az első oldalon
+        fullscreenBtn.style.display = e.data === 0 ? "block" : "none";
+      });
+    });
+  </script>
+
+  <audio id="flipSound" src="sounds/pageturn-102978.mp3" preload="auto"></audio>
+  <div id="fullscreen-button">Kattints ide a teljes képernyős nézetért</div>
+  <div id="page-indicator">Oldal 1 / 10</div>
+
+  <button id="mute-button" class="mute-toggle" title="Hang ki/be">🔊</button>
+
+</body>
+</html>

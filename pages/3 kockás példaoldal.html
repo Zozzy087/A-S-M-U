@@ -1,0 +1,237 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oldal címe</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../common-styles.css">
+  
+  <style>
+    #dice-widget-container {
+      position: relative; 
+      z-index: 1000;
+      background: transparent;
+      border-radius: 10px;
+      padding: 10px;
+      display: none;
+    }
+
+    .dice-toggle {
+      position: relative; 
+      z-index: 1000;
+      width: 50px;
+      height: 50px;
+      background: #7f00ff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .dice-results {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    #success-results {
+      background: black;
+      color: white;
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 1.2rem;
+    }
+    
+    .dice-button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      background: #7f00ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(127, 0, 255, 0.5);
+    }
+
+    .dice-button:hover {
+      background: #a020f0;
+      transform: scale(1.05);
+    }
+	.dice-title {
+  font-family: 'Cinzel', serif;
+  color: white;
+  background: black;
+  display: inline-block;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+  </style>
+</head>
+<body>
+
+<div class="page">
+<div class="page-content">
+<h2>KARAKTERALKOTÁS</h2>
+<p>Most rajtad a sor, hogy megteremtsd a saját sötét varázslódat,
+akivel belemerülsz a kalandokba és csatákba. Ahhoz, hogy egyedi
+karaktert hozz létre, először meg kell határoznod tulajdonságainak
+kezdő értékeit.</p>
+<!-- Kockadobás widgetek -->
+  <button class="dice-toggle" onclick="toggleDiceWidget()" title="3 Kockás dobás" style="padding: 4px 6px;">
+    <span style="font-size: 15px;">🎲🎲🎲</span>
+  </button>
+  <div id="dice-widget-container"></div>
+  
+ 
+<p>Ezek az értékek meghatározzák erejét és gyengeségeit, és döntő
+szerepet játszanak abban, hogy a játék során milyen eséllyel hajtod
+végre az akcióidat.</p>
+<p>...</p>
+<p>Most már minden tudsz. Lapozz és kezd el a kalandod!</p>
+<p><br>
+</p>
+</div>
+</div>
+
+<script>
+    // 3 kockás widget funkciók
+    function toggleDiceWidget() {
+      const container = document.getElementById('dice-widget-container');
+      if (container.style.display === 'none' || container.style.display === '') {
+        // Ellenőrizzük, hogy létezik-e a single-dice-widget-container
+        const singleDiceContainer = document.getElementById('single-dice-widget-container');
+        if (singleDiceContainer) {
+          singleDiceContainer.style.display = 'none';
+        }
+        
+        container.style.display = 'block';
+        showDiceRoll();
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
+    function showDiceRoll() {
+      const container = document.getElementById("dice-widget-container");
+      if (!container) return;
+
+      container.innerHTML = `
+          <div style="text-align:center; margin-top:20px;">
+              <h3 class="dice-title">
+                  Harci Kockadobás
+              </h3>
+              <br>
+              <button onclick="rollDice()" class="dice-button">
+                  Dobás
+              </button>
+              <div class="dice-results" id="dice-images"></div>
+              <div id="success-results"></div>
+          </div>
+      `;
+    }
+
+    function rollDice() {
+  const possiblePaths = [
+    {
+      1: '../images/d1.png',
+      2: '../images/d2.png',
+      3: '../images/d3.png',
+      4: '../images/d4.png',
+      5: '../images/d5.png',
+      6: '../images/d6.png'
+    },
+  ];
+  
+  let diceImages = possiblePaths[0];
+  
+  const diceContainer = document.getElementById('dice-images');
+  const successResults = document.getElementById('success-results');
+  diceContainer.innerHTML = '';
+
+  let successes = 0;
+
+  for (let i = 0; i < 3; i++) {
+    const roll = Math.floor(Math.random() * 6) + 1;
+    const img = document.createElement('img');
+    img.src = diceImages[roll];
+    img.alt = `Kocka: ${roll}`;
+    img.style.width = '80px';
+    img.style.height = '80px';
+    
+    // Sikeres dobás esetén zöld keret hozzáadása
+    if (roll >= 4) {
+      img.style.border = '3px solid #00ff00'; // Zöld keret
+      img.style.borderRadius = '10px';        // Kerekített sarkok
+      successes++;
+    }
+    
+    // Hibakezelés
+    let pathIndex = 0;
+    img.onerror = function() {
+      pathIndex++;
+      if (pathIndex < possiblePaths.length) {
+        this.src = possiblePaths[pathIndex][roll];
+      } else {
+        // Helyettesítő szöveg
+        const rollText = document.createElement('div');
+        rollText.textContent = roll;
+        rollText.style.width = '80px';
+        rollText.style.height = '80px';
+        rollText.style.backgroundColor = '#7f00ff';
+        rollText.style.color = 'white';
+        rollText.style.display = 'flex';
+        rollText.style.alignItems = 'center';
+        rollText.style.justifyContent = 'center';
+        rollText.style.fontSize = '36px';
+        rollText.style.borderRadius = '10px';
+        
+        // Sikeres dobás esetén zöld keret a tartalék elemre is
+        if (roll >= 4) {
+          rollText.style.border = '3px solid #00ff00';
+        }
+        
+        diceContainer.appendChild(rollText);
+      }
+    };
+    
+    diceContainer.appendChild(img);
+  }
+
+  let successText = '';
+  switch (successes) {
+    case 0:
+      successText = 'Nincs Siker';
+      break;
+    case 1:
+      successText = 'Egy Siker';
+      break;
+    case 2:
+      successText = 'Két Siker';
+      break;
+    case 3:
+      successText = 'Három Siker';
+      break;
+  }
+
+  successResults.textContent = successText;
+}
+</script>
+
+
+<br>
+<br>
+<h2 style="text-align: center;"><a href="../pages/4.html"><img style="border: 0px solid ; width: 203px; height: 37px;" alt="s" src="../images/lapozz.png"></a></h2>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oldal címe</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../common-styles.css">
+  
+  <style>
+    #dice-widget-container {
+      position: relative; 
+      z-index: 1000;
+      background: transparent;
+      border-radius: 10px;
+      padding: 10px;
+      display: none;
+    }
+
+    .dice-toggle {
+      position: relative; 
+      z-index: 1000;
+      width: 50px;
+      height: 50px;
+      background: #368B27;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .dice-results {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    #success-results {
+      background: transparent;
+      color: white;
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 1.2rem;
+    }
+    
+    .dice-button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      background: #368B27;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(127, 0, 255, 0.5);
+    }
+
+    .dice-button:hover {
+      background: #368B27;
+      transform: scale(1.05);
+    }
+	.dice-title {
+      font-family: 'Cinzel', serif;
+      color: white;
+      background: black;
+      display: inline-block;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    /* Új stílusok a karaktergeneráláshoz */
+    .result-item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .result-item img {
+      width: 45px;
+      height: 45px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+<div class="page-content">
+<h2>KARAKTERALKOTÁS</h2>
+<p>Most rajtad a sor, hogy megteremtsd a saját sötét varázslódat,
+akivel belemerülsz a kalandokba és csatákba. Ahhoz, hogy egyedi
+karaktert hozz létre, először meg kell határoznod tulajdonságainak
+kezdő értékeit.</p>
+<!-- Kockadobás widgetek -->
+  <button class="dice-toggle" onclick="toggleDiceWidget()" title="Karaktergenerálás" style="padding: 4px 6px;">
+    <span style="font-size: 25px;">🧙</span>
+  </button>
+  <div id="dice-widget-container"></div>
+  
+ 
+<p>Ezek az értékek meghatározzák erejét és gyengeségeit, és döntő
+szerepet játszanak abban, hogy a játék során milyen eséllyel hajtod
+végre az akcióidat.</p>
+<p>...</p>
+<p>Most már minden tudsz. Lapozz és kezd el a kalandod!</p>
+<p><br>
+</p>
+</div>
+</div>
+
+<script>
+    // Karaktergenerálás widget függvények
+    function toggleDiceWidget() {
+      const container = document.getElementById('dice-widget-container');
+      if (container.style.display === 'none' || container.style.display === '') {
+        // Ellenőrizzük, hogy létezik-e a single-dice-widget-container
+        const singleDiceContainer = document.getElementById('single-dice-widget-container');
+        if (singleDiceContainer) {
+          singleDiceContainer.style.display = 'none';
+        }
+        
+        container.style.display = 'block';
+        showCharacterGenerator();
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
+    function showCharacterGenerator() {
+      const container = document.getElementById("dice-widget-container");
+      if (!container) return;
+
+      container.innerHTML = `
+          <div style="text-align:center; margin-top:20px;">
+              <h3 class="dice-title">
+                  Karakteralkotás
+              </h3>
+			  <br>
+              <button onclick="generateCharacter()" class="dice-button">
+                  Karakter Generálása
+              </button>
+              <div id="character-results"></div>
+          </div>
+      `;
+    }
+
+    function generateCharacter() {
+  // Sötét tudás generálása: 1D6 + 6
+  const darkKnowledge = Math.floor(Math.random() * 6) + 1 + 6;
+
+  // Árnyék erő: Sötét tudás kétszerese
+  const shadowPower = darkKnowledge * 2;
+
+  // Életpont: 15 + Sötét tudás
+  const healthPoints = 15 + darkKnowledge;
+
+  // Eredmények megjelenítése ikonokkal
+  const resultsDiv = document.getElementById('character-results');
+  resultsDiv.innerHTML = `
+      <div style="background: transparent; color: white; padding: 10px; border-radius: 5px; margin-top: 20px; font-size: 2.2rem; display: flex; justify-content: center; flex-wrap: wrap; gap: 40px;">
+          <div class="result-item">
+              <img src="../images/dark_knowledge.png" alt="Sötét Tudás" onerror="this.src='images/dark_knowledge.png'" style="width: 85px; height: 85px;">
+              <span>: ${darkKnowledge}</span>
+          </div>
+          <div class="result-item">
+              <img src="../images/shadow_power.png" alt="Árnyék Erő" onerror="this.src='images/shadow_power.png'" style="width: 85px; height: 85px;">
+              <span>: ${shadowPower}</span>
+          </div>
+          <div class="result-item">
+              <img src="../images/health_points.png" alt="Életpont" onerror="this.src='images/health_points.png'" style="width: 85px; height: 85px;">
+              <span>: ${healthPoints}</span>
+          </div>
+      </div>
+  `;
+}
+</script>
+<br>
+<br>
+<h2 style="text-align: center;"><a href="6.html"><img style="border: 0px solid ; width: 250px; height: 47,57px;" alt="s" src="../images/lapozz.png"></a></h2>
+</body>
+</html>
+
