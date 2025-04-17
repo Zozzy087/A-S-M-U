@@ -69,11 +69,11 @@ button {
   padding: 10px 15px;
   border-radius: 5px;
   cursor: pointer;
-  font-family: 'Cinzel', serif;
+  font-family: 'Roboto', serif;
   margin: 5px;
 }
 
 button:hover {
-  background-color: #91E35D;;
+  background-color: #EE1A30;
 }
 
