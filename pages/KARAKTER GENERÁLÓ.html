@@ -19,20 +19,37 @@
     }
 
     .dice-toggle {
-      position: relative; 
-      z-index: 1000;
-      width: 50px;
-      height: 50px;
-      background: #7f00ff;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  position: relative;
+  z-index: 1000;
+
+  /* ne fix szélesség, csak belső párnázás */
+  width: auto;
+  padding: 0.75rem 1rem;
+
+  /* állíts be egy kényelmes betűméretet */
+  font-size: 1rem;
+  font-family: 'Cinzel', serif;  /* vagy Roboto, ha azt választod */
+  font-weight: 700;
+
+  background: #368B27;
+  color: white;
+  border: none;
+  border-radius: 5px;  /* kerekített téglalap */
+
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;  /* egy sorban maradjon */
+}
+
+/* Ha mobilon esetleg túl hosszú lenne, engedjük tördelni: */
+@media (max-width: 480px) {
+  .dice-toggle {
+    white-space: normal;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+}
+
     
     .dice-results {
       display: flex;
@@ -54,7 +71,7 @@
     .dice-button {
       padding: 10px 20px;
       margin-top: 10px;
-      background: #7f00ff;
+      background: #368B27;
       color: white;
       border: none;
       border-radius: 5px;
@@ -63,10 +80,14 @@
       box-shadow: 0 0 10px rgba(127, 0, 255, 0.5);
     }
 
-    .dice-button:hover {
-      background: #a020f0;
-      transform: scale(1.05);
-    }
+    button {
+  background-color: #4CAF50;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #45a049;
+}
 	.dice-title {
       font-family: 'Cinzel', serif;
       color: white;
@@ -103,9 +124,10 @@ akivel belemerülsz a kalandokba és csatákba. Ahhoz, hogy egyedi
 karaktert hozz létre, először meg kell határoznod tulajdonságainak
 kezdő értékeit.</p>
 <!-- Kockadobás widgetek -->
-  <button class="dice-toggle" onclick="toggleDiceWidget()" title="Karaktergenerálás" style="padding: 4px 6px;">
-    <span style="font-size: 25px;">🧙</span>
-  </button>
+  <button class="dice-toggle" onclick="toggleDiceWidget()" title="KRAGORN KEZDŐ TULAJDONSÁG ÉRTÉKEI (KATTINTS)">
+  KRAGORN KEZDŐ TULAJDONSÁG ÉRTÉKEI (KATTINTS)
+</button>
+
   <div id="dice-widget-container"></div>
   
  
@@ -185,6 +207,9 @@ végre az akcióidat.</p>
   `;
 }
 </script>
-
+<br>
+<br>
+<h2 style="text-align: center;"><a href="6.html"><img style="border: 0px solid ; width: 250px; height: 47,57px;" alt="s" src="../images/lapozz.png"></a></h2>
 </body>
 </html>
+
