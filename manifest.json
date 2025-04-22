@@ -15,7 +15,13 @@
       "src": "files/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "files/icon2-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "description": "Dark fantasy kalandkönyv, ahol a főhős te vagy!",
