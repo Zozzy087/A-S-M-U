@@ -1,19 +1,24 @@
-import { NextResponse } from 'next/server';
+// middleware.js
 import { createEdgeConfigClient } from '@vercel/edge-config';
 
 export default async function middleware(request) {
-  // Az URL ellenőrzése
   const url = new URL(request.url);
   
-  // Ha az app mappához próbálnak hozzáférni
   if (url.pathname.startsWith('/app/')) {
     // Cookie-k keresése
-    const token = request.cookies.get('auth_token')?.value;
-    const email = request.cookies.get('auth_email')?.value;
+    const cookies = request.headers.get('cookie') || '';
+    const tokenMatch = cookies.match(/auth_token=([^;]+)/);
+    const emailMatch = cookies.match(/auth_email=([^;]+)/);
+    
+    const token = tokenMatch ? tokenMatch[1] : null;
+    const email = emailMatch ? emailMatch[1] : null;
     
     // Ha nincsenek cookie-k, átirányítás a bejelentkezési oldalra
     if (!token || !email) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return new Response(null, {
+        status: 302,
+        headers: { Location: '/' }
+      });
     }
     
     try {
@@ -25,19 +30,24 @@ export default async function middleware(request) {
       
       // Ha nincs ilyen token vagy az email nem egyezik
       if (!userData || userData.email !== email) {
-        return NextResponse.redirect(new URL('/', request.url));
+        return new Response(null, {
+          status: 302,
+          headers: { Location: '/' }
+        });
       }
     } catch (error) {
       // Hiba esetén átirányítás a bejelentkezési oldalra
-      return NextResponse.redirect(new URL('/', request.url));
+      return new Response(null, {
+        status: 302,
+        headers: { Location: '/' }
+      });
     }
   }
   
   // Ha minden rendben, folytatás
-  return NextResponse.next();
+  return fetch(request);
 }
 
-// Meghatározzuk, hogy mely útvonalakon fusson a middleware
 export const config = {
   matcher: ['/app/:path*']
 };
