@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>A Sötét Mágia Útvesztője</title>
+  
+  <!-- PWA beállítások -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta http-equiv="Expires" content="0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-control" content="no-cache">
+  <meta http-equiv="Cache" content="no-cache">
+  
+  <!-- SEO és közösségi média beállítások -->
+  <meta name="description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
+  <meta name="keywords" content="kalandkönyv, interaktív könyv, fantasy, sötét mágia">
+  <link rel="icon" href="files/icon-512.png" type="image/png">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="A Sötét Mágia Útvesztője">
+  <meta property="og:description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
+  <meta property="og:image" content="./files/icon-512.png">
+  
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #323232;
+      font-family: 'Cinzel', serif;
+    }
+    
+    #book-container {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    /* Betöltő képernyő */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    
+    .loader {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #7f00ff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+	
+	/* Telepítési banner */
+#install-banner {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  background: #368B27;
+  color: white;
+  text-align: center;
+  padding: 0.75rem;          /* korábbi 12px helyett 0.75rem (~12px) */
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;           /* alap desktop méret: ~16px */
+  line-height: 1.4;
+  z-index: 10000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+/* Az alsó instrukció kisebbíthető */
+#install-banner small {
+  display: block;
+  margin-top: 0.25rem;
+  font-weight: 400;
+  font-size: 0.85em;         /* ~13.5px */
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+/* Tablet, nagyobb mobil: kicsit nagyobb betű */
+@media (max-width: 768px) {
+  #install-banner {
+    font-size: 1.125rem;     /* ~18px */
+    padding: 1rem;
+  }
+}
+
+/* Nagy monitorokon kicsit kisebb: ne foglaljon túl sok helyet */
+@media (min-width: 1200px) {
+  #install-banner {
+    font-size: 0.9rem;       /* ~14.4px */
+  }
+}
+
+	
+  </style>
+</head>
+<body>
+
+  <!-- === TELEPÍTÉS BANNER – NE MOZGASS SEMMIT, CSAK MÁSOLD IDE === -->
+  <div id="install-banner">
+    📲 Telepítsd az alkalmazást a főképernyőre!<br>
+    <small style="font-size:0.9em; opacity:0.8;">
+      1. Kattints ide<br>
+      2. Válaszd: “Hozzáadás a Főképernyőhöz” lehetőséget!
+    </small>
+  </div>
+
+  <!-- Betöltő képernyő -->
+  <div id="loading-screen">
+    <div class="loader"></div>
+  </div>
+
+  <!-- Könyv konténer -->
+  <div id="book-container">
+    <!-- A FlipbookEngine ide fogja beilleszteni az iframe-eket -->
+  </div>
+  
+  <!-- Hangok -->
+  <audio id="flip-sound" src="sounds/pageturn-102978.mp3" preload="auto"></audio>
+
+  <!-- TypeScript-ből fordított JavaScript -->
+  <script src="flipbook-engine.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        // Betöltő képernyő
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          setTimeout(() => {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+            }, 500);
+          }, 800);
+        }
+        
+        // FlipbookEngine inicializálása
+        const flipbook = new FlipbookEngine({
+          containerId: 'book-container',
+          totalPages: 300,
+          soundPath: 'sounds/pageturn-102978.mp3'
+        });
+        
+        console.log('Minden sikeresen inicializálva');
+      } catch (error) {
+        console.error('Hiba:', error);
+      }
+    });
+  </script>
+  
+    <!-- === INSTALL PROMPT HANDLER === -->
+  <script>
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('install-banner').style.display = 'block';
+    });
+
+    document.getElementById('install-banner')
+      .addEventListener('click', async () => {
+        const banner = document.getElementById('install-banner');
+        banner.style.display = 'none';
+        await deferredPrompt.prompt();
+        deferredPrompt = null;
+      });
+  </script>
+
+  
+  
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .then(() => console.log('Service Worker regisztrálva'))
+      .catch(err => console.error('SW hiba:', err));
+  }
+</script>
+  
+</body>
+</html>
