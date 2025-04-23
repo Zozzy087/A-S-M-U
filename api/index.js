@@ -13,6 +13,7 @@ export default async function handler(req, res) {
     
     // Token ellenőrzése - felhasználói adatok lekérése
     const userData = await edgeConfig.get(`user_${token}`);
+
     
     // Ha nincs ilyen token vagy az email nem egyezik
     if (!userData || userData.email !== email) {
@@ -32,3 +33,4 @@ export default async function handler(req, res) {
     return res.status(500).send('Szerver hiba történt');
   }
 }
+
