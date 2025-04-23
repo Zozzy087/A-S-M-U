@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const edgeConfig = createEdgeConfigClient(process.env.EDGE_CONFIG);
     
     // Token ellenőrzése - felhasználói adatok lekérése
-    const userData = await edgeConfig.get(`user:${token}`);
+    const userData = await edgeConfig.get(`user_${token}`);
     
     // Ha nincs ilyen token vagy az email nem egyezik
     if (!userData || userData.email !== email) {
