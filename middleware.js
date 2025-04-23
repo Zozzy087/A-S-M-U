@@ -1,6 +1,3 @@
-// middleware.js
-import { createEdgeConfigClient } from '@vercel/edge-config';
-
 export default async function middleware(request) {
   const url = new URL(request.url);
   
@@ -13,30 +10,13 @@ export default async function middleware(request) {
     const token = tokenMatch ? tokenMatch[1] : null;
     const email = emailMatch ? emailMatch[1] : null;
     
-    // Ha nincsenek cookie-k, átirányítás a bejelentkezési oldalra
-    if (!token || !email) {
-      return new Response(null, {
-        status: 302,
-        headers: { Location: '/' }
-      });
-    }
+    // AZONNALI MEGOLDÁS: Hardcoded adatok a gyors teszteléshez
+    const validUsers = {
+      'zozzy': 'lughlleu@gmail.com'
+    };
     
-    try {
-      // Edge Config kliens létrehozása
-      const edgeConfig = createEdgeConfigClient(process.env.EDGE_CONFIG);
-      
-      // Token ellenőrzése
-      const userData = await edgeConfig.get(`user:${token}`);
-      
-      // Ha nincs ilyen token vagy az email nem egyezik
-      if (!userData || userData.email !== email) {
-        return new Response(null, {
-          status: 302,
-          headers: { Location: '/' }
-        });
-      }
-    } catch (error) {
-      // Hiba esetén átirányítás a bejelentkezési oldalra
+    // Ha nincsenek cookie-k vagy érvénytelenek
+    if (!token || !email || validUsers[token] !== email) {
       return new Response(null, {
         status: 302,
         headers: { Location: '/' }
