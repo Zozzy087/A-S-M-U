@@ -9,8 +9,7 @@ export default async function handler(req, res) {
   
   try {
     // Edge Config kliens létrehozása
-    const edgeConfig = createEdgeConfigClient('https://edge-config.vercel.com/ecfg_...?...token=...');
-
+    const edgeConfig = createEdgeConfigClient(process.env.EDGE_CONFIG);
     
     // Token ellenőrzése - felhasználói adatok lekérése
     const userData = await edgeConfig.get(`user_${token}`);
