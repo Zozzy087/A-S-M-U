@@ -2,7 +2,7 @@
   "name": "a-s-m-u",
   "version": "1.0.0",
   "dependencies": {
-    "@vercel/edge-config": "^0.4.1",
+    "@vercel/edge-config": "^0.4.1"
   
   }
 }
