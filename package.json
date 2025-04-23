@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "dependencies": {
     "@vercel/edge-config": "^0.4.1",
-    "next": "^13.4.19"
+    //"next": "^13.4.19"
   }
 }
