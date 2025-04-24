@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Válaszok - A Sötét Mágia Útvesztője</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../common-styles.css">
+  
+  <style>
+    body {
+      background-color: #000000;
+      color: white;
+      font-family: 'Cinzel', serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      flex-grow: 1;
+    }
+    
+    .title {
+      color: #91E35D;
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px rgba(54, 139, 39, 0.5);
+    }
+    
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #91E35D;
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: transform 0.3s;
+    }
+    
+    .back-link:hover {
+      transform: translateX(-5px);
+    }
+    
+    .answer-container {
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 2px solid #368B27;
+      border-radius: 10px;
+      padding: 30px;
+      margin-top: 20px;
+    }
+    
+    .page-title {
+      font-family: 'Cinzel', serif;
+      color: white;
+      background-color: #368B27;
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+    }
+    
+    .page-select-container {
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .page-select-wrapper {
+      position: relative;
+      display: inline-block;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .page-select-wrapper:after {
+      content: "\25BC";
+      position: absolute;
+      top: 0;
+      right: 15px;
+      bottom: 0;
+      font-size: 12px;
+      line-height: 48px;
+      color: #91E35D;
+      pointer-events: none;
+    }
+    
+    select {
+      width: 100%;
+      padding: 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      background-color: #1a1a1a;
+      color: white;
+      border: 2px solid #368B27;
+      border-radius: 5px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: #91E35D;
+    }
+    
+    .go-button {
+      margin-top: 15px;
+      padding: 12px 30px;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      background-color: #368B27;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .go-button:hover {
+      background-color: #91E35D;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+    
+    /* Sors Istennői Rejtvény stílusok */
+    .puzzle-title {
+      font-weight: 700;
+      color: white;
+      margin-bottom: 30px;
+      line-height: 1.3;
+      font-size: 36px;
+      width: 600px;
+      padding: 20px;
+      background-color: #368B27;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .puzzle-box {
+      background-color: transparent;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    
+    .puzzle-box h2 {
+      color: white;
+      margin-bottom: 20px;
+    }
+    
+    .puzzle-box input {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #368B27; 
+      border-radius: 5px;
+      background-color: rgba(0, 0, 0, 0.2);
+      color: white;
+    }
+    
+    .puzzle-box button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      background-color: #368B27; 
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Cinzel', serif;
+    }
+    
+    .puzzle-box button:hover {
+      background-color: #4CAF50;
+    }
+    
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+      min-height: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../index.html" class="back-link">← Vissza a főoldalra</a>
+    
+    <h1 class="title">Válaszok</h1>
+    
+    <div class="page-select-container">
+      <div class="page-select-wrapper">
+        <select id="page-select" onchange="loadPage()">
+          <option value="" selected disabled>Válassz egy rejtvényt...</option>
+          <option value="sors-istenno">A Sors Istennőinek Rejtvénye</option>
+          <!-- További rejtvények itt -->
+        </select>
+      </div>
+    </div>
+    
+    <div class="answer-container">
+      <div class="content" id="page-content">
+        <p>Válassz egy rejtvényt a legördülő menüből a tartalom megjelenítéséhez.</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    &copy; 2025 A Sötét Mágia Útvesztője /Zordán Erik - DARK FANTASY KALANDKÖNYVEK/
+  </div>
+
+  <script>
+    // Oldal tartalmi adatbázis
+    const pageData = {
+      "sors-istenno": {
+        content: `
+          <h1 class="puzzle-title">A Sors Istennőinek Rejtvénye</h1>
+          <div class="puzzle-box">
+            <input type="text" id="left" placeholder="Ki a baloldali alak?">
+            <input type="text" id="center" placeholder="Ki a középső alak?">
+            <input type="text" id="right" placeholder="Ki a jobb oldali alak?">
+            <center><button onclick="checkSolution()">Ellenőrzés</button></center>
+            <div id="result"></div>
+          </div>
+        `
+      }
+      // További rejtvények hozzáadhatók itt
+    };
+    
+    // Oldal betöltése
+    function loadPage() {
+      let pageId = getUrlParameter('puzzle');
+      
+      if (!pageId) {
+        pageId = document.getElementById('page-select').value;
+      }
+      
+      if (pageId && pageData[pageId]) {
+        document.getElementById('page-select').value = pageId;
+        document.getElementById('page-content').innerHTML = pageData[pageId].content;
+        
+        // URL frissítése
+        const url = new URL(window.location);
+        url.searchParams.set('puzzle', pageId);
+        window.history.pushState({}, '', url);
+      }
+    }
+    
+    // URL paraméter ellenőrzése
+    function getUrlParameter(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+    
+    // Sors Istennői megoldásellenőrzés
+    function checkSolution() {
+      const left = document.getElementById('left').value.trim().toLowerCase();
+      const center = document.getElementById('center').value.trim().toLowerCase();
+      const right = document.getElementById('right').value.trim().toLowerCase();
+      const result = document.getElementById('result');
+      
+      if (left === 'múlt' && center === 'jövő' && right === 'jelen') {
+        result.innerHTML = '<span style="color: #4CAF50;">Helyes válasz! Lapozz a [következő] fejezethez.</span>';
+      } else {
+        result.innerHTML = '<span style="color: #f44336;">Helytelen válasz. Próbáld újra!</span>';
+      }
+    }
+    
+    // Oldal inicializálása
+    document.addEventListener('DOMContentLoaded', loadPage);
+  </script>
+</body>
+</html>

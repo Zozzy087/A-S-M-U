@@ -1,91 +1,361 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sötét Mágia - Belépés</title>
-    <style>
-        body {
-            font-family: 'Blogger Sans', serif;
-            background-color: #323232;
-            color: white;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        .container {
-            max-width: 400px;
-            padding: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-        }
-        h1 {
-            color: #368B27;
-            margin-bottom: 20px;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 5px;
-            box-sizing: border-box;
-            font-family: inherit;
-        }
-        button {
-            background-color: #368B27;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 15px;
-            font-family: inherit;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .error {
-            color: #ff6b6b;
-            display: none;
-            margin-top: 15px;
-        }
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>A Sötét Mágia Útvesztője</title>
+  
+  <!-- PWA beállítások -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta http-equiv="Expires" content="0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Cache-control" content="no-cache">
+  <meta http-equiv="Cache" content="no-cache">
+  
+  <!-- SEO és közösségi média beállítások -->
+  <meta name="description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
+  <meta name="keywords" content="kalandkönyv, interaktív könyv, fantasy, sötét mágia">
+  <link rel="icon" href="files/icon-512.png" type="image/png">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="A Sötét Mágia Útvesztője">
+  <meta property="og:description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
+  <meta property="og:image" content="./files/icon-512.png">
+  
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="common-styles.css">
+  
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      font-family: 'Cinzel', serif;
+      color: white;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .title {
+      color: #91E35D;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px rgba(54, 139, 39, 0.5);
+    }
+    
+    .subtitle {
+      font-size: 1.3rem;
+      margin-bottom: 40px;
+      color: #e0e0e0;
+    }
+    
+    .menu-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    
+    .menu-item {
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 2px solid #368B27;
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .menu-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(54, 139, 39, 0.3);
+      border-color: #91E35D;
+    }
+    
+    .menu-item img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 15px;
+    }
+    
+    .menu-item h3 {
+      margin: 0;
+      font-size: 1.4rem;
+      color: #91E35D;
+    }
+    
+    .menu-item p {
+      margin: 10px 0 0;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    
+    /* Legördülő menü */
+    .select-container {
+      margin-top: 30px;
+      text-align: center;
+    }
+    
+    .select-wrapper {
+      position: relative;
+      display: inline-block;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .select-wrapper:after {
+      content: "\25BC";
+      position: absolute;
+      top: 0;
+      right: 15px;
+      bottom: 0;
+      font-size: 12px;
+      line-height: 48px;
+      color: #91E35D;
+      pointer-events: none;
+    }
+    
+    select {
+      width: 100%;
+      padding: 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      background-color: #1a1a1a;
+      color: white;
+      border: 2px solid #368B27;
+      border-radius: 5px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: #91E35D;
+    }
+    
+    .go-button {
+      margin-top: 15px;
+      padding: 12px 30px;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      background-color: #368B27;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .go-button:hover {
+      background-color: #91E35D;
+    }
+    
+    /* Betöltő képernyő */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    
+    .loader {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #7f00ff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Telepítési banner */
+    #install-banner {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      background: #368B27;
+      color: white;
+      text-align: center;
+      padding: 0.75rem;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      line-height: 1.4;
+      z-index: 10000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    
+    #install-banner small {
+      display: block;
+      margin-top: 0.25rem;
+      font-weight: 400;
+      font-size: 0.85em;
+      opacity: 0.8;
+      text-transform: uppercase;
+    }
+    
+    @media (max-width: 768px) {
+      .title {
+        font-size: 2rem;
+      }
+      
+      .subtitle {
+        font-size: 1.1rem;
+      }
+      
+      #install-banner {
+        font-size: 1.125rem;
+        padding: 1rem;
+      }
+    }
+    
+    @media (min-width: 1200px) {
+      #install-banner {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>A Sötét Mágia Útvesztője</h1>
-        <p>Add meg a hozzáférési adataidat:</p>
-        
-        <form onsubmit="checkAccess(event)">
-            <input type="text" id="token" placeholder="Egyedi token" required>
-            <input type="email" id="email" placeholder="Email cím" required>
-            <button type="submit">Belépés</button>
-        </form>
-        
-        <p class="error" id="error">Érvénytelen belépési adatok!</p>
+  <!-- Telepítési banner -->
+  <div id="install-banner">
+    📲 Telepítsd az alkalmazást a főképernyőre!<br>
+    <small style="font-size:0.9em; opacity:0.8;">
+      1. Kattints ide<br>
+      2. Válaszd: "Hozzáadás a Főképernyőhöz" lehetőséget!
+    </small>
+  </div>
+
+  <!-- Betöltő képernyő -->
+  <div id="loading-screen">
+    <div class="loader"></div>
+  </div>
+
+  <div class="container">
+    <h1 class="title">A Sötét Mágia Útvesztője</h1>
+    <p class="subtitle">Válassz a rendelkezésre álló eszközök közül</p>
+    
+    <div class="menu-container">
+      <a href="pages/dice1.html" class="menu-item">
+        <img src="images/d6.png" alt="Egy kocka" onerror="this.src='images/d1.png'">
+        <h3>1 Kockás Dobás</h3>
+        <p>Egyszerű dobás egy kockával</p>
+      </a>
+      
+      <a href="pages/dice3.html" class="menu-item">
+        <img src="images/d3.png" alt="Három kocka" onerror="this.src='images/d3.png'">
+        <h3>3 Kockás Dobás</h3>
+        <p>Dobás három kockával - siker számolással</p>
+      </a>
+      
+      <a href="pages/character.html" class="menu-item">
+        <img src="images/dark_knowledge.png" alt="Karakter" onerror="this.src='images/dark_knowledge.png'">
+        <h3>Karaktergenerálás</h3>
+        <p>Hozz létre egy egyedi karaktert</p>
+      </a>
+      
+      <a href="pages/answer.html" class="menu-item">
+        <img src="images/lapozz.png" alt="Válaszok" onerror="this.src='images/lapozz.png'" style="width: 120px; height: auto;">
+        <h3>Válaszok</h3>
+        <p>Válaszok a könyv kérdéseire</p>
+      </a>
     </div>
     
-    <script>
-    function checkAccess(e) {
-        e.preventDefault();
-        const token = document.getElementById('token').value;
-        const email = document.getElementById('email').value;
-        
-        // Ellenőrzés az API-n keresztül
-        if (token && email) {
-            window.location.href = `/api?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
-        } else {
-            document.getElementById('error').style.display = 'block';
-        }
+    <!-- Legördülő menü az offline válaszadáshoz -->
+    <div class="select-container">
+      <h3>Gyors ugrás a válaszokhoz</h3>
+      <div class="select-wrapper">
+        <select id="answer-select">
+          <option value="" selected disabled>Válassz egy oldalt...</option>
+          <option value="1">1. oldal - A kezdet</option>
+          <option value="6">6. oldal - Válaszadós oldal</option>
+          <!-- További oldalak itt -->
+        </select>
+      </div>
+      <button class="go-button" onclick="goToAnswer()">Ugrás</button>
+    </div>
+  </div>
+
+  <script>
+    // Betöltő képernyő
+    document.addEventListener('DOMContentLoaded', () => {
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        setTimeout(() => {
+          loadingScreen.style.opacity = '0';
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+          }, 500);
+        }, 800);
+      }
+    });
+    
+    // Válaszoldalra ugrás
+    function goToAnswer() {
+      const select = document.getElementById('answer-select');
+      const selectedValue = select.value;
+      
+      if (selectedValue) {
+        window.location.href = `pages/answer.html?page=${selectedValue}`;
+      }
     }
-    </script>
+    
+    // Install prompt handler
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('install-banner').style.display = 'block';
+    });
+
+    document.getElementById('install-banner')
+      .addEventListener('click', async () => {
+        const banner = document.getElementById('install-banner');
+        banner.style.display = 'none';
+        await deferredPrompt.prompt();
+        deferredPrompt = null;
+      });
+    
+    // Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('./service-worker.js')
+        .then(() => console.log('Service Worker regisztrálva'))
+        .catch(err => console.error('SW hiba:', err));
+    }
+  </script>
 </body>
 </html>

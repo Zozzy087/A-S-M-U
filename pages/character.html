@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karaktergenerálás - A Sötét Mágia Útvesztője</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../common-styles.css">
+  
+  <style>
+    body {
+      background-color: #000000;
+      color: white;
+      font-family: 'Cinzel', serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      flex-grow: 1;
+    }
+    
+    .title {
+      color: #91E35D;
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px rgba(54, 139, 39, 0.5);
+    }
+    
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #91E35D;
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: transform 0.3s;
+    }
+    
+    .back-link:hover {
+      transform: translateX(-5px);
+    }
+    
+    .character-container {
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 2px solid #368B27;
+      border-radius: 10px;
+      padding: 30px;
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .character-title {
+      font-family: 'Cinzel', serif;
+      color: white;
+      background-color: #368B27;
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+    }
+    
+    .character-button {
+      padding: 12px 30px;
+      margin: 20px 0;
+      background-color: #368B27;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 10px rgba(54, 139, 39, 0.5);
+    }
+    
+    .character-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(54, 139, 39, 0.7);
+    }
+    
+    .character-results {
+      min-height: 120px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 20px 0;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .result-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .result-item img {
+      width: 85px;
+      height: 85px;
+    }
+    
+    .result-item span {
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+    
+    .description {
+      margin-top: 20px;
+      line-height: 1.6;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../index.html" class="back-link">← Vissza a főoldalra</a>
+    
+    <h1 class="title">Karaktergenerálás</h1>
+    
+    <div class="character-container">
+      <h2 class="character-title">KRAGORN KEZDŐ TULAJDONSÁG ÉRTÉKEI</h2>
+      
+      <div class="description">
+        Itt generálhatod a karaktered kezdő tulajdonságainak értékeit. A Sötét Tudás egy dobással kerül meghatározásra, majd ebből számolódnak a további tulajdonságok.
+      </div>
+      
+      <button onclick="generateCharacter()" class="character-button">
+        Karakter Generálása
+      </button>
+      
+      <div class="character-results" id="character-results">
+        <!-- Itt jelennek meg a generált értékek -->
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    &copy; 2025 A Sötét Mágia Útvesztője /Zordán Erik - DARK FANTASY KALANDKÖNYVEK/
+  </div>
+
+  <script>
+    function generateCharacter() {
+      // Animáció
+      const resultsDiv = document.getElementById('character-results');
+      resultsDiv.style.opacity = 0.5;
+      
+      setTimeout(() => {
+        // Sötét tudás generálása: 1D6 + 6
+        const darkKnowledge = Math.floor(Math.random() * 6) + 1 + 6;
+
+        // Árnyék erő: Sötét tudás kétszerese
+        const shadowPower = darkKnowledge * 2;
+
+        // Életpont: 15 + Sötét tudás
+        const healthPoints = 15 + darkKnowledge;
+
+        // Eredmények megjelenítése ikonokkal
+        resultsDiv.innerHTML = `
+          <div class="result-item">
+            <img src="../images/dark_knowledge.png" alt="Sötét Tudás" onerror="this.src='../images/dark_knowledge.png'">
+            <span>${darkKnowledge}</span>
+          </div>
+          <div class="result-item">
+            <img src="../images/shadow_power.png" alt="Árnyék Erő" onerror="this.src='../images/shadow_power.png'">
+            <span>${shadowPower}</span>
+          </div>
+          <div class="result-item">
+            <img src="../images/health_points.png" alt="Életpont" onerror="this.src='../images/health_points.png'">
+            <span>${healthPoints}</span>
+          </div>
+        `;
+        
+        resultsDiv.style.opacity = 1;
+      }, 300);
+    }
+  </script>
+</body>
+</html>
