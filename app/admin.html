@@ -3,79 +3,352 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel</title>
+  <title>Admin Panel - Sötét Mágia</title>
   <style>
-    body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; }
-    input, button { padding: 8px; width: 100%; }
-    button { background: #368B27; color: white; border: none; cursor: pointer; }
-    .message { padding: 10px; margin: 10px 0; }
-    .success { background: #d4edda; color: #155724; }
-    .error { background: #f8d7da; color: #721c24; }
+    body {
+      font-family: 'Blogger Sans', sans-serif;
+      background-color: #323232;
+      color: white;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    h1, h2 {
+      color: #368B27;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input, button {
+      padding: 10px;
+      width: 100%;
+      border-radius: 5px;
+      border: none;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #368B27;
+      color: white;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: #222;
+    }
+    .hidden {
+      display: none;
+    }
+    .message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .success {
+      background-color: rgba(54, 139, 39, 0.3);
+      border: 1px solid #45a049;
+    }
+    .error {
+      background-color: rgba(220, 53, 69, 0.3);
+      border: 1px solid #dc3545;
+    }
+    .action-btn {
+      background-color: #dc3545;
+      width: auto;
+      padding: 5px 10px;
+    }
+    .tab {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #222;
+      cursor: pointer;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
+    }
+    .tab.active {
+      background-color: #368B27;
+    }
+    .tab-content {
+      padding: 20px;
+      background-color: #222;
+      border-radius: 0 5px 5px 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>Token Kezelő</h1>
-  
-  <div id="message" class="message" style="display: none;"></div>
-  
-  <form id="tokenForm">
-    <div class="form-group">
-      <label for="adminPassword">Admin Jelszó</label>
-      <input type="password" id="adminPassword" required>
+  <div class="container">
+    <h1>Sötét Mágia - Admin Panel</h1>
+    
+    <div id="login-panel">
+      <div class="form-group">
+        <label for="adminPassword">Admin jelszó</label>
+        <input type="password" id="adminPassword" placeholder="Add meg az admin jelszót">
+      </div>
+      <button id="loginButton">Bejelentkezés</button>
+      <div id="loginMessage" class="message hidden"></div>
     </div>
     
-    <div class="form-group">
-      <label for="token">Token</label>
-      <input type="text" id="token" required>
+    <div id="admin-panel" class="hidden">
+      <div class="tabs">
+        <div class="tab active" data-tab="users">Felhasználók</div>
+        <div class="tab" data-tab="add-user">Új felhasználó</div>
+      </div>
+      
+      <div id="users-tab" class="tab-content">
+        <h2>Felhasználók kezelése</h2>
+        <div id="usersList">Betöltés...</div>
+      </div>
+      
+      <div id="add-user-tab" class="tab-content hidden">
+        <h2>Új felhasználó hozzáadása</h2>
+        <div class="form-group">
+          <label for="newToken">Token</label>
+          <input type="text" id="newToken" placeholder="pl. token123">
+        </div>
+        <div class="form-group">
+          <label for="newEmail">Email</label>
+          <input type="email" id="newEmail" placeholder="pl. felhasznalo@pelda.com">
+        </div>
+        <div class="form-group">
+          <label for="newName">Név</label>
+          <input type="text" id="newName" placeholder="pl. Példa Felhasználó">
+        </div>
+        <button id="addUserButton">Felhasználó hozzáadása</button>
+        <div id="addUserMessage" class="message hidden"></div>
+      </div>
     </div>
-    
-    <div class="form-group">
-      <label for="email">Email</label>
-      <input type="email" id="email" required>
-    </div>
-    
-    <div class="form-group">
-      <label for="name">Név</label>
-      <input type="text" id="name" required>
-    </div>
-    
-    <button type="submit">Token Létrehozása</button>
-  </form>
+  </div>
 
   <script>
-    document.getElementById('tokenForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const adminPassword = document.getElementById('adminPassword').value;
-      const token = document.getElementById('token').value;
-      const email = document.getElementById('email').value;
-      const name = document.getElementById('name').value;
-      
-      try {
-        const response = await fetch('/api/admin/create-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adminPassword, token, email, name })
+    // Admin jelszó tárolása a munkamenetben
+    let adminPassword = '';
+
+    // DOM elemek
+    const loginPanel = document.getElementById('login-panel');
+    const adminPanel = document.getElementById('admin-panel');
+    const loginButton = document.getElementById('loginButton');
+    const loginMessage = document.getElementById('loginMessage');
+    const usersTab = document.getElementById('users-tab');
+    const addUserTab = document.getElementById('add-user-tab');
+    const usersList = document.getElementById('usersList');
+    const addUserButton = document.getElementById('addUserButton');
+    const addUserMessage = document.getElementById('addUserMessage');
+    const tabs = document.querySelectorAll('.tab');
+
+    // Tab kezelés
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabId = tab.getAttribute('data-tab');
+        
+        // Tabok aktiválása/deaktiválása
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Tab tartalmak megjelenítése/elrejtése
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.add('hidden');
         });
         
-        const data = await response.json();
+        document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+      });
+    });
+
+    // Admin bejelentkezés
+    loginButton.addEventListener('click', () => {
+      adminPassword = document.getElementById('adminPassword').value;
+      
+      if (!adminPassword) {
+        showMessage(loginMessage, 'Kérlek add meg az admin jelszót', 'error');
+        return;
+      }
+      
+      // Egyszerű teszt: próbáljuk lekérni a felhasználói listát
+      fetchUsers()
+        .then(users => {
+          loginPanel.classList.add('hidden');
+          adminPanel.classList.remove('hidden');
+          renderUsersList(users);
+        })
+        .catch(error => {
+          showMessage(loginMessage, 'Hibás admin jelszó vagy szerver hiba', 'error');
+          console.error('Login error:', error);
+        });
+    });
+
+    // Felhasználók lekérése
+    async function fetchUsers() {
+      const response = await fetch(`/api/admin/list-users?adminPassword=${encodeURIComponent(adminPassword)}`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Ismeretlen hiba');
+      }
+      
+      return await response.json();
+    }
+
+    // Felhasználók listájának renderelése
+    function renderUsersList(users) {
+      if (Object.keys(users).length === 0) {
+        usersList.innerHTML = '<p>Nincsenek felhasználók.</p>';
+        return;
+      }
+      
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Email</th>
+              <th>Név</th>
+              <th>Létrehozva</th>
+              <th>Műveletek</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      Object.entries(users).forEach(([token, user]) => {
+        const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A';
         
-        const messageEl = document.getElementById('message');
-        if (response.ok) {
-          messageEl.className = 'message success';
-          messageEl.textContent = data.message;
-        } else {
-          messageEl.className = 'message error';
-          messageEl.textContent = data.error;
+        html += `
+          <tr>
+            <td>${token}</td>
+            <td>${user.email}</td>
+            <td>${user.name}</td>
+            <td>${createdAt}</td>
+            <td>
+              <button class="action-btn delete-user" data-token="${token}">Törlés</button>
+            </td>
+          </tr>
+        `;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+      `;
+      
+      usersList.innerHTML = html;
+      
+      // Törlés gomb eseménykezelők
+      document.querySelectorAll('.delete-user').forEach(button => {
+        button.addEventListener('click', async () => {
+          const token = button.getAttribute('data-token');
+          if (confirm(`Biztosan törlöd ezt a felhasználót: ${token}?`)) {
+            try {
+              await deleteUser(token);
+              const users = await fetchUsers();
+              renderUsersList(users);
+            } catch (error) {
+              alert(`Hiba a felhasználó törlésekor: ${error.message}`);
+            }
+          }
+        });
+      });
+    }
+
+    // Felhasználó törlése
+    async function deleteUser(token) {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          adminPassword,
+          token
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Ismeretlen hiba');
+      }
+      
+      return await response.json();
+    }
+
+    // Új felhasználó hozzáadása
+    addUserButton.addEventListener('click', async () => {
+      const token = document.getElementById('newToken').value;
+      const email = document.getElementById('newEmail').value;
+      const name = document.getElementById('newName').value;
+      
+      if (!token || !email || !name) {
+        showMessage(addUserMessage, 'Minden mező kitöltése kötelező', 'error');
+        return;
+      }
+      
+      try {
+        const result = await fetch('/api/admin/add-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            adminPassword,
+            token,
+            email,
+            name
+          })
+        });
+        
+        if (!result.ok) {
+          const error = await result.json();
+          throw new Error(error.error || 'Ismeretlen hiba');
         }
-        messageEl.style.display = 'block';
+        
+        const data = await result.json();
+        showMessage(addUserMessage, data.message, 'success');
+        
+        // Mezők törlése
+        document.getElementById('newToken').value = '';
+        document.getElementById('newEmail').value = '';
+        document.getElementById('newName').value = '';
+        
+        // Felhasználók újratöltése
+        const users = await fetchUsers();
+        renderUsersList(users);
         
       } catch (error) {
-        console.error('Hiba:', error);
+        showMessage(addUserMessage, `Hiba: ${error.message}`, 'error');
       }
     });
+
+    // Üzenet megjelenítése
+    function showMessage(element, message, type) {
+      element.textContent = message;
+      element.className = `message ${type}`;
+      
+      // 3 másodperc után elrejtjük
+      setTimeout(() => {
+        element.classList.add('hidden');
+      }, 3000);
+    }
   </script>
 </body>
 </html>
