@@ -1,4 +1,8 @@
-import { createEdgeConfigClient } from '@vercel/edge-config';
+// RÉGI import:
+// import { createEdgeConfigClient } from '@vercel/edge-config';
+
+// ÚJ import:
+import { get } from '@vercel/edge-config';
 
 export default async function middleware(request) {
   const url = new URL(request.url);
@@ -21,11 +25,8 @@ export default async function middleware(request) {
     }
     
     try {
-      // Edge Config kliens létrehozása
-      const edgeConfig = createEdgeConfigClient(process.env.EDGE_CONFIG);
-      
-      // Token ellenőrzése
-      const userData = await edgeConfig.get(`user_${token}`);
+      // Új módszer:
+      const userData = await get(`user_${token}`);
       
       // Ha nincs ilyen token vagy az email nem egyezik
       if (!userData || userData.email !== email) {

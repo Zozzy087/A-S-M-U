@@ -1,4 +1,8 @@
-import { createEdgeConfigClient } from '@vercel/edge-config';
+// RÉGI import:
+// import { createEdgeConfigClient } from '@vercel/edge-config';
+
+// ÚJ import és inicializálás:
+import { get } from '@vercel/edge-config';
 
 export default async function handler(req, res) {
   const { token, email } = req.query;
@@ -8,11 +12,8 @@ export default async function handler(req, res) {
   }
   
   try {
-    // Edge Config kliens létrehozása
-    const edgeConfig = createEdgeConfigClient(process.env.EDGE_CONFIG);
-    
-    // JAVÍTÁS: Helyes kulcsformátum használata
-    const userData = await edgeConfig.get(`user_${token}`);
+    // Új módszer:
+    const userData = await get(`user_${token}`);
     
     // Ha nincs ilyen token vagy az email nem egyezik
     if (!userData || userData.email !== email) {
