@@ -259,40 +259,53 @@
     </small>
   </div>
 
-  <!-- Betöltő képernyő -->
-  <div id="loading-screen">
-    <div class="loader"></div>
-  </div>
-
-  <div class="container">
-    <h1 class="title">A Sötét Mágia Útvesztője</h1>
-    <p class="subtitle">Válassz a rendelkezésre álló eszközök közül</p>
+ <!-- Betöltő képernyő -->
+<div id="loading-screen">
+  <div class="loader"></div>
+</div>
+<div class="container">
+  <h1 class="title">A Sötét Mágia Útvesztője</h1>
+  <p class="subtitle">Válassz a rendelkezésre álló eszközök közül</p>
+  
+  <div class="menu-container">
+    <a href="pages/dice1.html" class="menu-item">
+      <img src="images/d6.png" alt="Egy kocka" onerror="this.src='images/d1.png'">
+      <h3>1 Kockás Dobás</h3>
+      <p>Egyszerű dobás egy kockával</p>
+    </a>
     
-    <div class="menu-container">
-      <a href="pages/dice1.html" class="menu-item">
-        <img src="images/d6.png" alt="Egy kocka" onerror="this.src='images/d1.png'">
-        <h3>1 Kockás Dobás</h3>
-        <p>Egyszerű dobás egy kockával</p>
-      </a>
-      
-      <a href="pages/dice3.html" class="menu-item">
-        <img src="images/d3.png" alt="Három kocka" onerror="this.src='images/d3.png'">
-        <h3>3 Kockás Dobás</h3>
-        <p>Dobás három kockával - siker számolással</p>
-      </a>
-      
-      <a href="pages/character.html" class="menu-item">
-        <img src="images/dark_knowledge.png" alt="Karakter" onerror="this.src='images/dark_knowledge.png'">
-        <h3>Karaktergenerálás</h3>
-        <p>Hozz létre egy egyedi karaktert</p>
-      </a>
-      
-     <center> <a href="pages/answer.html" class="menu-item">
-        <img src="images/lapozz.png" alt="Válaszok" onerror="this.src='images/lapozz.png'" style="width: 120px; height: auto;">
-        <h3>Válaszok</h3>
-        <p>Válaszok a könyv kérdéseire (Ha offline vagy)</p>
-      </a> </center>
-    </div>
+    <a href="pages/dice3.html" class="menu-item">
+      <img src="images/d3.png" alt="Három kocka" onerror="this.src='images/d3.png'">
+      <h3>3 Kockás Dobás</h3>
+      <p>Dobás három kockával - siker számolással</p>
+    </a>
+    
+    <a href="pages/character.html" class="menu-item">
+      <img src="images/dark_knowledge.png" alt="Karakter" onerror="this.src='images/dark_knowledge.png'">
+      <h3>Karaktergenerálás</h3>
+      <p>Hozz létre egy egyedi karaktert</p>
+    </a>
+  </div>
+  
+  <!-- Válaszok elem középre igazítva -->
+  <div class="centered-menu-item">
+    <a href="pages/answer.html" class="menu-item">
+      <img src="images/lapozz.png" alt="Válaszok" onerror="this.src='images/lapozz.png'" style="width: 120px; height: auto;">
+      <h3>Válaszok</h3>
+      <p>Válaszok a könyv kérdéseire (Ha offline vagy)</p>
+    </a>
+  </div>
+</div>
+
+<style>
+  /* Középre igazítás a menüben */
+  .centered-menu-item {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 20px;
+  }
+</style>
     
     <div class="footer">
     &copy; 2025 A Sötét Mágia Útvesztője /Zordán Erik - DARK FANTASY KALANDKÖNYVEK/
