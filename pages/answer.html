@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Válaszok - A Sötét Mágia Útvesztője</title>
   
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../common-styles.css">
   
   <style>
     body {
       background-color: #000000;
       color: white;
-      font-family: "Palatino", "Palatino Linotype", "Book Antiqua", serif;
+      font-family: "Palatino", "Blogger Sans", serif;
       margin: 0;
       padding: 0;
       min-height: 100vh;
@@ -23,31 +24,25 @@
       max-width: 800px;
       width: 95%;
       margin: 0 auto;
-      padding: 10px;
+      padding: 20px 10px;
       flex-grow: 1;
     }
     
     .title {
       color: #91E35D;
       text-align: center;
-      font-size: 2.2rem;
-      margin: 30px 0;
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
+      margin-bottom: 20px;
       text-shadow: 0 0 10px rgba(54, 139, 39, 0.5);
     }
     
     .back-link {
-      display: inline-flex;
-      align-items: center;
+      display: inline-block;
       margin-bottom: 20px;
       color: #91E35D;
       text-decoration: none;
       font-size: 1.1rem;
       transition: transform 0.3s;
-    }
-    
-    .back-link:before {
-      content: "←";
-      margin-right: 8px;
     }
     
     .back-link:hover {
@@ -58,96 +53,152 @@
       background-color: rgba(0, 0, 0, 0.7);
       border: 2px solid #368B27;
       border-radius: 10px;
-      padding: 15px;
+      padding: 20px 15px;
       margin-top: 20px;
     }
     
-    .select-dropdown {
+    .page-title {
+      font-family: "Palatino", "Blogger Sans", serif;
+      color: white;
+      background-color: #368B27;
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+    }
+    
+    .page-select-container {
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .page-select-wrapper {
       position: relative;
-      margin: 20px auto;
+      display: inline-block;
+      max-width: 400px;
       width: 100%;
     }
     
-    .select-dropdown select {
+    .page-select-wrapper:after {
+      content: "\25BC";
+      position: absolute;
+      top: 0;
+      right: 15px;
+      bottom: 0;
+      font-size: 12px;
+      line-height: 48px;
+      color: #91E35D;
+      pointer-events: none;
+    }
+    
+    select {
       width: 100%;
-      padding: 15px;
-      font-family: "Palatino", "Palatino Linotype", "Book Antiqua", serif;
-      font-size: 1.1rem;
-      background-color: #000;
+      padding: 12px;
+      font-family: "Palatino", "Blogger Sans", serif;
+      font-size: 1rem;
+      background-color: #1a1a1a;
       color: white;
       border: 2px solid #368B27;
-      border-radius: 10px;
+      border-radius: 5px;
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
-      padding-right: 30px;
+      -moz-appearance: none;
     }
     
-    .select-dropdown:after {
-      content: "▼";
-      position: absolute;
-      top: 50%;
-      right: 15px;
-      transform: translateY(-50%);
-      color: #91E35D;
-      pointer-events: none;
-      font-size: 0.8rem;
+    select:focus {
+      outline: none;
+      border-color: #91E35D;
     }
     
+    .go-button {
+      margin-top: 15px;
+      padding: 12px 30px;
+      font-family: "Palatino", "Blogger Sans", serif;
+      font-size: 1rem;
+      background-color: #368B27;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .go-button:hover {
+      background-color: #91E35D;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 15px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+    
+    /* Sors Istennői Rejtvény stílusok */
     .puzzle-title {
       font-weight: 700;
       color: white;
-      margin: 0 auto 30px auto;
+      margin-bottom: 30px;
       line-height: 1.3;
-      font-size: 28px;
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      max-width: 600px;
       width: 100%;
       padding: 15px;
       background-color: #368B27;
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       text-align: center;
+      margin-left: auto;
+      margin-right: auto;
     }
     
     .puzzle-box {
-      padding: 20px 0;
+      background-color: transparent;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    
+    .puzzle-box h2 {
+      color: white;
+      margin-bottom: 20px;
     }
     
     .puzzle-box input {
       display: block;
       width: 100%;
-      padding: 15px;
-      margin: 15px 0;
+      padding: 10px;
+      margin: 10px 0;
       border: 1px solid #368B27; 
-      border-radius: 10px;
-      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 5px;
+      background-color: rgba(0, 0, 0, 0.2);
       color: white;
-      font-size: 1rem;
-      font-family: "Palatino", "Palatino Linotype", "Book Antiqua", serif;
+      font-size: 16px; /* Elég nagy méret a mobilon történő begépeléshez */
     }
     
-    .puzzle-box input::placeholder {
-      color: rgba(255, 255, 255, 0.7);
+    .puzzle-box button {
+      padding: 12px 25px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      background-color: #368B27; 
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: "Palatino", "Blogger Sans", serif;
+      font-size: 1rem;
     }
     
     .button-container {
       display: flex;
       justify-content: center;
-      margin: 25px 0;
+      width: 100%;
     }
     
-    .check-button {
-      padding: 12px 40px;
-      background-color: #368B27; 
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-family: "Palatino", "Palatino Linotype", "Book Antiqua", serif;
-      font-size: 1.1rem;
-      transition: background-color 0.3s;
-    }
-    
-    .check-button:hover {
+    .puzzle-box button:hover {
       background-color: #4CAF50;
     }
     
@@ -158,53 +209,79 @@
       text-align: center;
     }
     
-    .footer {
-      text-align: center;
-      margin-top: auto;
-      padding: 20px;
-      font-size: 0.9rem;
-      opacity: 0.7;
-    }
-    
-    /* Reszponzív beállítások */
-    @media (max-width: 480px) {
+    /* Média lekérdezések a különböző képernyőméretekhez */
+    @media screen and (max-width: 768px) {
       .container {
-        width: 90%;
+        padding: 15px 10px;
+      }
+      
+      .answer-container {
+        padding: 15px 10px;
       }
       
       .title {
-        font-size: 1.8rem;
-        margin: 20px 0;
+        margin-bottom: 15px;
       }
       
       .puzzle-title {
-        font-size: 24px;
         padding: 12px;
+        margin-bottom: 20px;
+      }
+    }
+    
+    @media screen and (max-width: 480px) {
+      .container {
+        padding: 10px 5px;
       }
       
-      .check-button {
-        padding: 12px 30px;
+      .back-link {
+        font-size: 0.9rem;
+      }
+      
+      .answer-container {
+        padding: 12px 8px;
+      }
+      
+      .puzzle-title {
+        padding: 10px;
+        margin-bottom: 15px;
+      }
+      
+      .puzzle-box {
+        padding: 10px 5px;
+      }
+      
+      .puzzle-box input {
+        padding: 8px;
+      }
+      
+      .footer {
+        margin-top: 20px;
+        padding: 10px;
+        font-size: 0.8rem;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <a href="../index.html" class="back-link">Vissza a főoldalra</a>
+    <a href="../index.html" class="back-link">← Vissza a főoldalra</a>
     
     <h1 class="title">Válaszok</h1>
     
-    <div class="select-dropdown">
-      <select id="page-select" onchange="loadPage()">
-        <option value="" selected disabled>A Sors Istennőinek Rejtvénye ▼</option>
-        <option value="sors-istenno">A Sors Istennőinek Rejtvénye</option>
-        <!-- További rejtvények itt -->
-      </select>
+    <div class="page-select-container">
+      <div class="page-select-wrapper">
+        <select id="page-select" onchange="loadPage()">
+          <option value="" selected disabled>Válassz egy rejtvényt...</option>
+          <option value="sors-istenno">A Sors Istennőinek Rejtvénye</option>
+          <!-- További rejtvények itt -->
+        </select>
+      </div>
     </div>
     
     <div class="answer-container">
       <div class="content" id="page-content">
-        <p>Betöltés...</p>
+        <p>Válassz egy rejtvényt a legördülő menüből a tartalom megjelenítéséhez.</p>
       </div>
     </div>
   </div>
@@ -224,7 +301,7 @@
             <input type="text" id="center" placeholder="Ki a középső alak?">
             <input type="text" id="right" placeholder="Ki a jobb oldali alak?">
             <div class="button-container">
-              <button class="check-button" onclick="checkSolution()">Ellenőrzés</button>
+              <button onclick="checkSolution()">Ellenőrzés</button>
             </div>
             <div id="result"></div>
           </div>
@@ -239,11 +316,6 @@
       
       if (!pageId) {
         pageId = document.getElementById('page-select').value;
-      }
-      
-      if (!pageId) {
-        // Alapértelmezett: az első rejtvény betöltése ha nincs kiválasztva semmi
-        pageId = "sors-istenno";
       }
       
       if (pageId && pageData[pageId]) {
@@ -277,10 +349,8 @@
       }
     }
     
-    // Oldal inicializálása - az első rejtvény automatikus betöltése
-    document.addEventListener('DOMContentLoaded', function() {
-      loadPage();
-    });
+    // Oldal inicializálása
+    document.addEventListener('DOMContentLoaded', loadPage);
   </script>
 </body>
 </html>
