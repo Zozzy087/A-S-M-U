@@ -136,7 +136,7 @@
       opacity: 0.7;
     }
     
-    /* Rejtvény stílusok */
+    /* Sors Istennői Rejtvény stílusok */
     .puzzle-title {
       font-weight: 700;
       color: white;
@@ -145,7 +145,7 @@
       font-size: clamp(1.5rem, 4vw, 2.2rem);
       max-width: 600px;
       width: 100%;
-      padding: 15px;
+      padding: auto;
       background-color: #368B27;
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -155,10 +155,9 @@
     }
     
     .puzzle-box {
-      background-color: rgba(54, 139, 39, 0.1);
-      padding: 20px;
+      background-color: transparent;
+      padding: auto;
       border-radius: 10px;
-      border: 1px solid #368B27;
       margin-top: 20px;
     }
     
@@ -170,14 +169,13 @@
     .puzzle-box input {
       display: block;
       width: 100%;
-      padding: 12px 15px;
+      padding: auto;
       margin: 25px 0;
       border: 1px solid #368B27; 
       border-radius: 5px;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0, 0, 0, 0.2);
       color: white;
-      font-size: 16px;
-      font-family: "Palatino", "Blogger Sans", serif;
+      font-size: 16px; /* Elég nagy méret a mobilon történő begépeléshez */
     }
     
     .puzzle-box button {
@@ -191,7 +189,6 @@
       cursor: pointer;
       font-family: "Palatino", "Blogger Sans", serif;
       font-size: 1rem;
-      transition: background-color 0.3s, transform 0.2s;
     }
     
     .button-container {
@@ -201,8 +198,7 @@
     }
     
     .puzzle-box button:hover {
-      background-color: #91E35D;
-      transform: scale(1.05);
+      background-color: #4CAF50;
     }
     
     #result {
@@ -210,21 +206,6 @@
       font-weight: bold;
       min-height: 24px;
       text-align: center;
-      padding: 10px;
-    }
-
-    .story-text {
-      font-style: italic;
-      margin-bottom: 20px;
-      line-height: 1.7;
-      text-align: justify;
-      border-left: 3px solid #368B27;
-      padding-left: 15px;
-    }
-
-    .emphasis {
-      color: #91E35D;
-      font-weight: bold;
     }
     
     /* Média lekérdezések a különböző képernyőméretekhez */
@@ -242,7 +223,7 @@
       }
       
       .puzzle-title {
-        padding: 12px;
+        padding: auto;
         margin-bottom: 20px;
       }
     }
@@ -261,16 +242,16 @@
       }
       
       .puzzle-title {
-        padding: 10px;
+        padding: auto;
         margin-bottom: 15px;
       }
       
       .puzzle-box {
-        padding: 15px 10px;
+        padding: 10px 5px;
       }
       
       .puzzle-box input {
-        padding: 10px;
+        padding: auto;
       }
       
       .footer {
