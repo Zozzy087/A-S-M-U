@@ -11,7 +11,6 @@ const STATIC_ASSETS = [
   'pages/dice3.html',   // 3 kockás dobás oldal
   'pages/character.html',  // karaktergenerálás
   'pages/answer.html',   // válaszadós oldal
-  'pages/answer1.html',   // első rejtvény
   'sounds/pageturn-102978.mp3',
   'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap',
   'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap'
