@@ -272,8 +272,10 @@
       <div class="page-select-wrapper">
         <select id="page-select">
   <option value="" selected disabled>Válassz egy rejtvényt...</option>
-  <option value="arnyekesszencia">Az Árnyék Tanács Próbája</option>
-  <option value="sors-istenno">A Sors Istennőinek Rejtvénye</option>
+  <option value="arnyekesszencia">251-es rejtvény megoldása</option>
+  <option value="sors-istenno">11-es rejtvény megoldása</option>
+  <option value="kod">62-es rejtvény megoldása</option>
+  <option value="kod2">164-es rejtvény megoldása</option>
   <!-- További rejtvények itt -->
 </select>
       </div>
@@ -290,12 +292,12 @@
     &copy; 2025 A Sötét Mágia Útvesztője /Zordán Erik - DARK FANTASY KALANDKÖNYVEK/
   </div>
 
-  <script>
+<script>
     // Oldal tartalmi adatbázis
     const pageData = {
       "sors-istenno": {
         content: `
-          <h1 class="puzzle-title">A Sors Istennőinek Rejtvénye</h1>
+          <h1 class="puzzle-title">Azonosítsd a sors istennőket!</h1>
           <div class="puzzle-box">
             <input type="text" id="left" placeholder="Ki a baloldali alak?">
             <input type="text" id="center" placeholder="Ki a középső alak?">
@@ -310,13 +312,41 @@
       "arnyekesszencia": {
         content: `
           
-          <h1 class="puzzle-title">Az Árnyék Tanács Próbája</h1>
+          <h1 class="puzzle-title">Hogyan tudsz négy varázslatot úgy létrehozni, hogy csak mindössze 12 cseppnyi esszenciád van?</h1>
           <div class="puzzle-box">
-             <h2>Hogyan tudsz négy varázslatot úgy létrehozni, hogy csak mindössze 12 cseppnyi esszenciád van?</h2>
+             
 			 
             <input type="text" id="solution" placeholder="Írd be a megoldásod...">
             <div class="button-container">
               <button onclick="checkArnyekesszencia()">Ellenőrzés</button>
+            </div>
+            <div id="result"></div>
+          </div>
+        `
+      },
+      "kod": {
+        content: `
+          <h1 class="puzzle-title">Kódfejtő</h1>
+          <div class="puzzle-box">
+             <h2>Add meg a helyes kódot:</h2>
+			 
+            <input type="text" id="code" placeholder="Írd be a kódot...">
+            <div class="button-container">
+              <button onclick="checkCode()">Ellenőrzés</button>
+            </div>
+            <div id="result"></div>
+          </div>
+        `
+      },
+      "kod2": {
+        content: `
+          <h1 class="puzzle-title">Második Kódfejtő</h1>
+          <div class="puzzle-box">
+             <h2>Add meg a helyes kódot:</h2>
+			 
+            <input type="text" id="code2" placeholder="Írd be a kódot...">
+            <div class="button-container">
+              <button onclick="checkCode2()">Ellenőrzés</button>
             </div>
             <div id="result"></div>
           </div>
@@ -425,6 +455,33 @@
         result.innerHTML = '<span style="color: #f44336;">Helytelen válasz. Az árnyak közelebb húzódnak... Gondold újra!</span>';
       }
     }
+
+   
+   // Első kódfejtő függvény (25-ös kód)
+    function checkCode() {
+        const code = document.getElementById('code').value;
+        const result = document.getElementById('result');
+        
+        // Itt állítsd be a helyes kódot
+        if (code === "25") {
+            result.innerHTML = '<span style="color: #4CAF50;">Helyes! Lapozz a [209]-re a következő fejezethez!</span>';
+        } else {
+            result.innerHTML = '<span style="color: #f44336;">Helytelen válasz. Próbáld újra!</span>';
+        }
+    }
+    
+    // Második kódfejtő függvény (6-os kód)
+    function checkCode2() {
+        const code = document.getElementById('code2').value;
+        const result = document.getElementById('result');
+        
+        // Itt állítsd be a helyes kódot
+        if (code === "6") {
+            result.innerHTML = '<span style="color: #4CAF50;">Helyes! Lapozz a [113]-ra a következő fejezethez!</span>';
+        } else {
+            result.innerHTML = '<span style="color: #f44336;">Helytelen válasz. Veszítesz 3 ÉP-t! Próbáld újra!</span>';
+        }
+    }
     
     // Enter lenyomására is ellenőrizzen
     document.addEventListener('keypress', function(event) {
@@ -435,6 +492,10 @@
           checkSorsIstenno();
         } else if (currentPuzzle === 'arnyekesszencia') {
           checkArnyekesszencia();
+        } else if (currentPuzzle === 'kod') {
+          checkCode();
+        } else if (currentPuzzle === 'kod2') {
+          checkCode2();
         }
       }
     });
