@@ -1,12 +1,12 @@
 // Firebase konfiguráció
 const firebaseConfig = {
-  apiKey: "AIzaSyDuaNmAUjA0u7GYnD81BW40hJey6q1VA",
+  apiKey: "AIzaSyDxsN0vk0dAoDu7GYn2Bl8WoKDejy6q1vA",
   authDomain: "a-s-m-u.firebaseapp.com",
   projectId: "a-s-m-u",
   storageBucket: "a-s-m-u.firebasestorage.app",
   messagingSenderId: "317821756996",
-  appId: "1:317821756996:web:614194b49318BB92abe11",
-  measurementId: "G-ENT3XNIKTE"
+  appId: "1:317821756996:web:61d1b94b291080592abe11",
+  measurementId: "G-ENT3XNTKTE"
 };
 
 // Firebase inicializálása
@@ -21,3 +21,6 @@ window.firebaseApp = {
   auth: auth,
   db: db
 };
+
+// Konzolba írjuk a konfigurációt ellenőrzésre
+console.log("Firebase config loaded:", firebaseConfig);
