@@ -1,40 +1,30 @@
 {
-  "name": "Interactive Flipbook",
-  "short_name": "Flipbook",
-  "description": "An interactive flipbook with offline capabilities",
-  "start_url": "/",
+  "name": "A Sötét Mágia Útvesztője",
+  "short_name": "Sötét Mágia",
+  "start_url": "index.html",
+  "scope": ".",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay"
+  ],
   "background_color": "#000000",
-  "theme_color": "#368B27",
+  "theme_color": "#000000",
   "orientation": "any",
   "icons": [
-    {
-      "src": "files/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
     {
       "src": "files/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
+      "purpose": "any"
+    },
     {
-      "name": "Start Reading",
-      "url": "/",
-      "description": "Start reading the flipbook"
+      "src": "files/icon2-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["books", "entertainment"],
-  "screenshots": [
-    {
-      "src": "files/screenshot-1.png",
-      "sizes": "1280x720",
-      "type": "image/png"
-    }
-  ],
-  "prefer_related_applications": false
+  "description": "Dark fantasy kalandkönyv, ahol a főhős te vagy!",
+  "lang": "hu",
+  "dir": "auto"
 }
