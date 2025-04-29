@@ -47,16 +47,7 @@ const RESOURCES_TO_CACHE = STATIC_ASSETS
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        // Egyesével próbáljuk cache-elni az erőforrásokat
-        const cachePromises = RESOURCES_TO_CACHE.map(url => {
-          return cache.add(url).catch(error => {
-            console.warn('Nem sikerült cache-elni:', url, error);
-            return Promise.resolve(); // Folytatjuk a többi fájllal
-          });
-        });
-        return Promise.all(cachePromises);
-      })
+      .then(cache => cache.addAll(RESOURCES_TO_CACHE))
       .then(() => self.skipWaiting())
   );
 });
