@@ -118,44 +118,44 @@ class AuthService {
   
   // A kódot megjelöli aktívként és hozzáadja az eszközt
   async markCodeAsActive(code, userId) {
-    try {
-      const codeRef = this.db.collection(this.CODES_COLLECTION).doc(code);
-      const codeDoc = await codeRef.get();
-      
-      if (!codeDoc.exists) {
-        throw new Error('A kód nem létezik');
-      }
-      
-      const codeData = codeDoc.data();
-      const currentDevices = codeData.devices || [];
-      const deviceExists = currentDevices.some(device => device.deviceId === userId);
-      
-      // Ha az eszköz már szerepel a listában, nincs szükség frissítésre
-      if (deviceExists) {
-        return true;
-      }
-      
-      // Új eszköz hozzáadása
-      const updatedDevices = [
-        ...currentDevices,
-        {
-          deviceId: userId,
-          activatedAt: this.db.firestore.FieldValue.serverTimestamp()
-        }
-      ];
-      
-      // Kód státuszának és eszközlistájának frissítése
-      await codeRef.update({
-        status: 'active',  // "unused" → "active"
-        devices: updatedDevices
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Hiba a kód aktiválásakor:', error);
-      throw error;
+  try {
+    const codeRef = this.db.collection(this.CODES_COLLECTION).doc(code);
+    const codeDoc = await codeRef.get();
+    
+    if (!codeDoc.exists) {
+      throw new Error('A kód nem létezik');
     }
+    
+    const codeData = codeDoc.data();
+    const currentDevices = codeData.devices || [];
+    const deviceExists = currentDevices.some(device => device.deviceId === userId);
+    
+    // Ha az eszköz már szerepel a listában, nincs szükség frissítésre
+    if (deviceExists) {
+      return true;
+    }
+    
+    // Új eszköz hozzáadása
+    const updatedDevices = [
+      ...currentDevices,
+      {
+        deviceId: userId,
+        activatedAt: this.db.firestore.FieldValue.serverTimestamp()
+      }
+    ];
+    
+    // Kód státuszának és eszközlistájának frissítése
+    await codeRef.update({
+      status: 'active',  // "unused" → "active"
+      devices: updatedDevices
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Hiba a kód aktiválásakor:', error);
+    throw error;
   }
+}
   
   // Hitelesítési adatok mentése
   async storeCredentials(user) {
