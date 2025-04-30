@@ -105,7 +105,7 @@ class AuthService {
     }
   }
   
-  // Kód aktiválása vagy új eszköz hozzáadása
+  // Kód aktiválása vagy új eszköz hozzáadása - JAVÍTOTT verzió
   async markCodeAsUsed(code, userId) {
     try {
       const codeRef = this.db.collection(this.CODES_COLLECTION).doc(code);
@@ -117,10 +117,15 @@ class AuthService {
       
       const codeData = codeDoc.data();
       
-      // Eszköz információk
+      // HIBA kijavítása: Ne használjunk serverTimestamp() tömb elemekben
+      // Ehelyett JavaScript Date objektumot használunk
+      const currentTime = new Date();
+      
+      // Eszköz információk - eltávolítjuk a FieldValue.serverTimestamp()-ot
       const deviceInfo = {
         deviceId: userId,
-        activatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        // JAVÍTVA: JavaScript dátum objektumot használunk
+        activatedAt: currentTime,
         deviceType: this._getDeviceType(),
         userAgent: navigator.userAgent
       };
@@ -139,9 +144,12 @@ class AuthService {
           return true; // Már aktiválva van ez az eszköz
         }
         
-        // Új eszköz hozzáadása a listához
+        // Új eszköz hozzáadása a listához (kézi összefűzéssel, nem FieldValue.arrayUnion-nal)
+        const updatedDevices = [...(codeData.devices || []), deviceInfo];
+        
+        // Frissítés a teljes tömbbel
         await codeRef.update({
-          devices: firebase.firestore.FieldValue.arrayUnion(deviceInfo)
+          devices: updatedDevices
         });
       }
       
