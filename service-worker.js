@@ -1,5 +1,5 @@
 // ► 1. Cache név verzió: ha módosítasz valamit, növeld pl. '…-v2'-re
-const CACHE_NAME = 'kalandkonyv-cache-v9';
+const CACHE_NAME = 'kalandkonyv-cache-v10';
 
 // ► 2. Statikus fájlok (install fázisban ezeket töltjük be először)
 const STATIC_ASSETS = [
@@ -14,6 +14,7 @@ const STATIC_ASSETS = [
   'js/auth-service.js',     // Autentikációs szolgáltatás
   'js/activation-ui.js',    // Aktivációs felület
   'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap',
+  'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'
@@ -81,6 +82,7 @@ self.addEventListener('fetch', event => {
   // Firebase API kérések - mindig hálózatról
   if (url.hostname.includes('firestore.googleapis.com') || 
       url.hostname.includes('firebase') ||
+      url.hostname.includes('googleapis.com') ||
       url.pathname.includes('auth')) {
     return;  // Ne kezeljük a Firebase API kéréseket service worker-ben
   }
@@ -96,6 +98,9 @@ self.addEventListener('fetch', event => {
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           }
           return networkRes;
+        }).catch(err => {
+          console.error('Kép betöltési hiba:', err);
+          // Nincs default fallback képekre
         });
       })
     );
@@ -114,7 +119,9 @@ self.addEventListener('fetch', event => {
           // csak HTML oldalak és statikus fájlok kerüljenek cache-be
           if (
             url.pathname.startsWith('/pages/') ||
-            networkRes.headers.get('content-type')?.includes('text/html')
+            networkRes.headers.get('content-type')?.includes('text/html') ||
+            url.pathname.endsWith('.js') ||
+            url.pathname.endsWith('.css')
           ) {
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           }
@@ -125,7 +132,32 @@ self.addEventListener('fetch', event => {
         if (url.pathname.startsWith('/pages/')) {
           return caches.match('offline.html');
         }
+        // Ha index.html-t kérünk offline állapotban
+        if (url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+          return caches.match('offline.html');
+        }
       });
     })
   );
+});
+
+// CORS proxy a külső erőforrásokhoz
+self.addEventListener('fetch', event => {
+  // Csak a fonts.googleapis.com és fonts.gstatic.com kéréseket kezeljük
+  const url = new URL(event.request.url);
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          // Klónozzuk a választ, hogy cache-elhessük
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
+          return response;
+        });
+      })
+    );
+  }
 });

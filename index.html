@@ -28,7 +28,7 @@
   
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
  
   <style>
     body, html {
@@ -142,7 +142,7 @@
     📲 Telepítsd az alkalmazást a főképernyőre!<br>
     <small style="font-size:0.9em; opacity:0.8;">
       1. Kattints ide<br>
-      2. Válaszd: “Hozzáadás a Főképernyőhöz” lehetőséget!
+      2. Válaszd: "Hozzáadás a Főképernyőhöz" lehetőséget!
     </small>
   </div>
 
@@ -163,31 +163,90 @@
   <script src="flipbook-engine.js"></script>
   <!-- Script módosítása a helyes sorrendhez -->
   <script>
+    // Eseményfigyelő az aktiváció sikeréhez - ELŐRE definiáljuk!
+    document.addEventListener('activationSuccess', function() {
+      console.log("Aktiváció sikeres esemény elkapva!");
+      
+      try {
+        // FlipbookEngine inicializálása az aktiváció után
+        const flipbook = new FlipbookEngine({
+          containerId: 'book-container',
+          totalPages: 300,
+          soundPath: 'sounds/pageturn-102978.mp3'
+        });
+        
+        // Betöltő képernyő elrejtése
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          setTimeout(() => {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+            }, 500);
+          }, 300);
+        }
+        
+        console.log('Flipbook sikeres inicializálása az aktiváció után!');
+      } catch (err) {
+        console.error("Hiba a FlipbookEngine inicializálásakor:", err);
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         console.log("DOMContentLoaded esemény aktiválva");
-        // Ellenőrizzük, hogy létezik-e az activationUI
-        if (!window.activationUI) {
-          console.error("activationUI nem érhető el! Megpróbálom létrehozni...");
-          // Ha a modulok betöltődtek, de az activationUI nem jött létre
-          if (window.authService) {
-            window.activationUI = new ActivationUI();
-          } else {
-            console.error("authService sem érhető el! Nem tudok activationUI-t létrehozni.");
-            // Betöltő képernyő elrejtése, ha hiba van
-            document.getElementById('loading-screen').style.display = 'none';
-            return;
-          }
+        
+        // Ellenőrizzük, hogy léteznek-e a szükséges Firebase objektumok
+        if (!window.firebaseApp || !window.firebaseApp.auth || !window.firebaseApp.db) {
+          console.error("Firebase objektumok nem érhetők el!");
+          
+          // Próbáljuk újratölteni a Firebase szkripteket
+          const firebaseConfig = document.createElement('script');
+          firebaseConfig.src = 'js/firebase-config.js';
+          document.head.appendChild(firebaseConfig);
+          
+          // Kis késleltetés után próbáljuk újra
+          setTimeout(async () => {
+            if (window.firebaseApp) {
+              console.log("Firebase objektumok újratöltve!");
+              await initializeServices();
+            } else {
+              console.error("Nem sikerült betölteni a Firebase objektumokat!");
+              document.getElementById('loading-screen').style.display = 'none';
+            }
+          }, 1000);
+          
+          return;
         }
         
-        // Betöltő képernyő
-        const loadingScreen = document.getElementById('loading-screen');
-        
-        // Aktiváció ellenőrzése
-        const isActivated = await window.activationUI.initialize();
-        
-        // Ha aktiválva van, folytatjuk a normál inicializálást
-        if (isActivated) {
+        await initializeServices();
+      } catch (error) {
+        console.error('Hiba az inicializálás során:', error);
+        // Betöltő képernyő elrejtése hiba esetén
+        document.getElementById('loading-screen').style.display = 'none';
+      }
+    });
+    
+    // Külön függvénybe helyezzük a szolgáltatások inicializálását
+    async function initializeServices() {
+      // Ellenőrizzük, hogy létezik-e az authService
+      if (!window.authService) {
+        console.warn("authService nem érhető el, létrehozás...");
+        window.authService = new AuthService();
+      }
+      
+      // Ellenőrizzük, hogy létezik-e az activationUI
+      if (!window.activationUI) {
+        console.warn("activationUI nem érhető el, létrehozás...");
+        window.activationUI = new ActivationUI();
+      }
+      
+      // Aktiváció ellenőrzése
+      const isActivated = await window.activationUI.initialize();
+      
+      // Ha aktiválva van, folytatjuk a normál inicializálást
+      if (isActivated) {
+        try {
           // FlipbookEngine inicializálása
           const flipbook = new FlipbookEngine({
             containerId: 'book-container',
@@ -196,6 +255,7 @@
           });
           
           // Betöltő képernyő elrejtése
+          const loadingScreen = document.getElementById('loading-screen');
           if (loadingScreen) {
             setTimeout(() => {
               loadingScreen.style.opacity = '0';
@@ -206,19 +266,18 @@
           }
           
           console.log('Minden sikeresen inicializálva');
-        } else {
-          // Ha nincs aktiválva, elrejtjük a betöltő képernyőt,
-          // hogy látszódjon az aktivációs űrlap
-          if (loadingScreen) {
-            loadingScreen.style.display = 'none';
-          }
+        } catch (err) {
+          console.error("Hiba a FlipbookEngine inicializálásakor:", err);
         }
-      } catch (error) {
-        console.error('Hiba:', error);
-        // Betöltő képernyő elrejtése hiba esetén
-        document.getElementById('loading-screen').style.display = 'none';
+      } else {
+        // Ha nincs aktiválva, elrejtjük a betöltő képernyőt,
+        // hogy látszódjon az aktivációs űrlap
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.style.display = 'none';
+        }
       }
-    });
+    }
   </script>
   
     <!-- === INSTALL PROMPT HANDLER === -->
