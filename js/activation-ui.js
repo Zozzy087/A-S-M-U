@@ -4,6 +4,7 @@ class ActivationUI {
     this.authService = window.authService;
     this.isActivated = false;
     this.activationContainer = null;
+    this.correctCodeFormat = /^[A-Z0-9]{5}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/; // Helyes formátum: XXXXX-XXXX-XXXX-XXXX
   }
   
   // Aktivációs UI inicializálása
@@ -36,11 +37,11 @@ class ActivationUI {
           <h2>A Sötét Mágia Útvesztője</h2>
           <p>Köszönjük a vásárlást! A folytatáshoz add meg az aktivációs kódodat:</p>
           <div class="activation-form">
-            <input type="text" id="activation-code" placeholder="XXXX-XXXX-XXXX" autocomplete="off">
+            <input type="text" id="activation-code" placeholder="XXXXX-XXXX-XXXX-XXXX" autocomplete="off" maxlength="19">
             <button id="activate-btn">Aktiválás</button>
           </div>
           <p id="activation-message" class="activation-message"></p>
-          <p class="activation-info">Egy aktivációs kód maximum 3 eszközön használható.</p>
+          <p class="activation-info">Egy aktivációs kóddal a könyv akár 3 különböző eszközön is használható.</p>
         </div>
       </div>
     `;
@@ -131,8 +132,48 @@ class ActivationUI {
     
     // Eseménykezelők hozzáadása
     document.getElementById('activate-btn').addEventListener('click', () => this._handleActivation());
-    document.getElementById('activation-code').addEventListener('keypress', (e) => {
+    
+    // Kód beviteli mező eseménykezelője
+    const codeInput = document.getElementById('activation-code');
+    codeInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') this._handleActivation();
+    });
+    
+    // Kódbeviteli formázás kezelése
+    codeInput.addEventListener('input', (e) => {
+      let value = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      
+      // Eltávolítjuk a dupla kötőjeleket
+      value = value.replace(/-+/g, '-');
+      
+      // Eltávolítjuk a rosszkor beillesztett kötőjeleket
+      if (value.startsWith('-')) {
+        value = value.substring(1);
+      }
+      
+      // Automatikus kötőjel beillesztése, de csak a megfelelő helyeken
+      // Az első 5 karakter után
+      if (value.length > 5 && value.charAt(5) !== '-') {
+        value = value.substring(0, 5) + '-' + value.substring(5);
+      }
+      
+      // A következő 4 karakter után
+      if (value.length > 10 && value.charAt(10) !== '-') {
+        value = value.substring(0, 10) + '-' + value.substring(10);
+      }
+      
+      // A következő 4 karakter után
+      if (value.length > 15 && value.charAt(15) !== '-') {
+        value = value.substring(0, 15) + '-' + value.substring(15);
+      }
+      
+      // Limitáljuk a maximális hosszt
+      if (value.length > 19) {
+        value = value.substring(0, 19);
+      }
+      
+      // Beállítjuk a módosított értéket
+      e.target.value = value;
     });
   }
   
@@ -145,15 +186,40 @@ class ActivationUI {
     messageElement.className = 'activation-message' + (isSuccess ? ' success' : '');
   }
   
+  // Aktivációs kód ellenőrzése és formázása
+  _formatActivationCode(code) {
+    // Eltávolítjuk a nem alfanumerikus karaktereket és nagybetűsítjük
+    let formattedCode = code.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    
+    // Ha a kód már formázva van (XXX-XXX-XXX formátum), akkor hagyjuk úgy
+    if (this.correctCodeFormat.test(code)) {
+      return code;
+    }
+    
+    // Egyébként formázzuk a megfelelő formátumra
+    if (formattedCode.length >= 5) {
+      formattedCode = 
+        formattedCode.substring(0, 5) + 
+        (formattedCode.length > 5 ? '-' + formattedCode.substring(5, 9) : '') +
+        (formattedCode.length > 9 ? '-' + formattedCode.substring(9, 13) : '') +
+        (formattedCode.length > 13 ? '-' + formattedCode.substring(13, 17) : '');
+    }
+    
+    return formattedCode;
+  }
+  
   // Aktivációs kódkezelés
   async _handleActivation() {
     const codeInput = document.getElementById('activation-code');
-    const code = codeInput.value.trim().toUpperCase();
+    const rawCode = codeInput.value.trim();
     
-    if (!code) {
+    if (!rawCode) {
       this._showMessage('Kérlek add meg az aktivációs kódot');
       return;
     }
+    
+    // Formázzuk a kódot a megfelelő formátumra
+    const code = this._formatActivationCode(rawCode);
     
     try {
       // Gomb letiltása az ellenőrzés idejére
