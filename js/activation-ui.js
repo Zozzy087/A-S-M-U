@@ -37,7 +37,7 @@ class ActivationUI {
           <h2>A Sötét Mágia Útvesztője</h2>
           <p>Köszönjük a vásárlást! A folytatáshoz add meg az aktivációs kódodat:</p>
           <div class="activation-form">
-            <input type="text" id="activation-code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" maxlength="19">
+            <input type="text" id="activation-code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" maxlength="20">
             <button id="activate-btn">Aktiválás</button>
           </div>
           <p id="activation-message" class="activation-message"></p>
