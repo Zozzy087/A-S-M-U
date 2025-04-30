@@ -9,9 +9,9 @@ class AuthService {
     // Autentikáció változásának figyelése
     this.auth.onAuthStateChanged(user => {
       if (user) {
-        console.log('Felhasználó bejelentkezve:', user.uid);
+        console.log('[AuthService] Felhasználó bejelentkezve:', user.uid);
       } else {
-        console.log('Nincs bejelentkezett felhasználó');
+        console.log('[AuthService] Nincs bejelentkezett felhasználó');
       }
     });
   }
@@ -19,37 +19,45 @@ class AuthService {
   // Ellenőrzi, van-e tárolt autentikáció
   async checkStoredAuth() {
     try {
+      console.log('[AuthService] Tárolt autentikáció ellenőrzése...');
       const storedAuth = localStorage.getItem(this.STORAGE_KEY);
-      if (!storedAuth) return null;
+      if (!storedAuth) {
+        console.log('[AuthService] Nincs tárolt autentikáció');
+        return null;
+      }
       
       const authData = JSON.parse(storedAuth);
+      console.log('[AuthService] Tárolt autentikáció betöltve:', authData.userId);
       
       // Ellenőrizzük, hogy a tárolt token érvényes-e még
       if (this.auth.currentUser) {
         if (this.auth.currentUser.uid === authData.userId) {
+          console.log('[AuthService] A bejelentkezett felhasználó megegyezik a tároltal');
           return this.auth.currentUser;
         }
       }
       
       // Próbáljunk meg újra bejelentkezni a tárolt adatokkal
       try {
+        console.log('[AuthService] Újra bejelentkezés a tárolt adatokkal...');
         await this.auth.signInAnonymously();
         
         // Ellenőrizzük, hogy a kapott UID egyezik-e a tároltal
         if (this.auth.currentUser && this.auth.currentUser.uid === authData.userId) {
+          console.log('[AuthService] Sikeres újra bejelentkezés, egyező UID');
           return this.auth.currentUser;
         } else {
-          // Ha nem egyezik, töröljük a tárolt adatokat
+          console.log('[AuthService] Az új bejelentkezés UID-ja nem egyezik a tároltal');
           localStorage.removeItem(this.STORAGE_KEY);
           return null;
         }
       } catch (error) {
-        console.error('Hiba történt a bejelentkezés során:', error);
+        console.error('[AuthService] Hiba történt a bejelentkezés során:', error);
         localStorage.removeItem(this.STORAGE_KEY);
         return null;
       }
     } catch (error) {
-      console.error('Hiba a tárolt autentikáció ellenőrzésekor:', error);
+      console.error('[AuthService] Hiba a tárolt autentikáció ellenőrzésekor:', error);
       return null;
     }
   }
@@ -57,50 +65,69 @@ class AuthService {
   // Aktivációs kód ellenőrzése
   async verifyActivationCode(code) {
     try {
-      const codeDoc = await this.db.collection(this.CODES_COLLECTION).doc(code).get();
+      console.log('[AuthService] Kód ellenőrzése:', code);
       
-      if (!codeDoc.exists) {
-        return { valid: false, message: 'Érvénytelen aktivációs kód' };
+      if (!this.db) {
+        console.error('[AuthService] Firestore nem inicializálódott!');
+        return { valid: false, message: 'Adatbázis kapcsolat hiba' };
       }
       
-      const codeData = codeDoc.data();
-      
-      // Ellenőrizzük, hogy a kód már aktiválva van-e 
-      if (codeData.status === 'active') {
-        // Ellenőrizzük, hogy nem léptük-e túl a maximális eszközszámot
-        const maxDevices = codeData.maxDevices || 3;
-        if (codeData.devices && codeData.devices.length >= maxDevices) {
-          return { 
-            valid: false, 
-            message: `Ez a kód már a maximális számú eszközön (${maxDevices}) aktiválva van` 
-          };
+      try {
+        const codeDoc = await this.db.collection(this.CODES_COLLECTION).doc(code).get();
+        
+        if (!codeDoc.exists) {
+          console.log('[AuthService] A kód nem létezik az adatbázisban:', code);
+          return { valid: false, message: 'Érvénytelen aktivációs kód' };
         }
         
-        // Ellenőrizzük, hogy ez az eszköz már aktiválva van-e
-        if (this.auth.currentUser && codeData.devices) {
-          const deviceExists = codeData.devices.some(device => 
-            device.deviceId === this.auth.currentUser.uid
-          );
+        const codeData = codeDoc.data();
+        console.log('[AuthService] Kód adatok:', JSON.stringify(codeData));
+        
+        // Ellenőrizzük, hogy a kód már aktiválva van-e 
+        if (codeData.status === 'active') {
+          // Ellenőrizzük, hogy nem léptük-e túl a maximális eszközszámot
+          const maxDevices = codeData.maxDevices || 3;
+          if (codeData.devices && codeData.devices.length >= maxDevices) {
+            console.log('[AuthService] A kód elérte a maximum eszközszámot:', codeData.devices.length);
+            return { 
+              valid: false, 
+              message: `Ez a kód már a maximális számú eszközön (${maxDevices}) aktiválva van` 
+            };
+          }
           
-          if (deviceExists) {
-            return { valid: true, message: 'Ez az eszköz már aktiválva van', alreadyActivated: true };
+          // Ellenőrizzük, hogy ez az eszköz már aktiválva van-e
+          if (this.auth.currentUser && codeData.devices) {
+            const deviceExists = codeData.devices.some(device => 
+              device.deviceId === this.auth.currentUser.uid
+            );
+            
+            if (deviceExists) {
+              console.log('[AuthService] Ez az eszköz már aktiválva van');
+              return { valid: true, message: 'Ez az eszköz már aktiválva van', alreadyActivated: true };
+            }
           }
         }
+        
+        return { valid: true };
+      } catch (dbError) {
+        console.error('[AuthService] Adatbázis hiba a kód ellenőrzésekor:', dbError);
+        return { valid: false, message: 'Adatbázis hiba: ' + dbError.message };
       }
-      
-      return { valid: true };
     } catch (error) {
-      console.error('Hiba a kód ellenőrzésekor:', error);
-      return { valid: false, message: 'Hiba történt a kód ellenőrzésekor' };
+      console.error('[AuthService] Általános hiba a kód ellenőrzésekor:', error);
+      return { valid: false, message: 'Hiba történt a kód ellenőrzésekor: ' + error.message };
     }
   }
   
   // Névtelen bejelentkezés
   async signInAnonymously() {
     try {
-      return await this.auth.signInAnonymously();
+      console.log('[AuthService] Névtelen bejelentkezés megkezdése...');
+      const result = await this.auth.signInAnonymously();
+      console.log('[AuthService] Névtelen bejelentkezés sikeres:', result.user.uid);
+      return result;
     } catch (error) {
-      console.error('Névtelen bejelentkezési hiba:', error);
+      console.error('[AuthService] Névtelen bejelentkezési hiba:', error);
       throw error;
     }
   }
@@ -108,54 +135,86 @@ class AuthService {
   // Kód aktiválása vagy új eszköz hozzáadása - JAVÍTOTT verzió
   async markCodeAsUsed(code, userId) {
     try {
+      console.log('[AuthService] Kód aktiválása:', code, 'userId:', userId);
+      
+      if (!this.db) {
+        throw new Error('Firestore nem inicializálódott!');
+      }
+      
       const codeRef = this.db.collection(this.CODES_COLLECTION).doc(code);
-      const codeDoc = await codeRef.get();
+      console.log('[AuthService] Kód lekérése...');
+      
+      let codeDoc;
+      try {
+        codeDoc = await codeRef.get();
+      } catch (getError) {
+        console.error('[AuthService] Hiba a kód lekérésekor:', getError);
+        throw new Error('Nem sikerült lekérni a kódot: ' + getError.message);
+      }
       
       if (!codeDoc.exists) {
+        console.error('[AuthService] A kód nem létezik:', code);
         throw new Error('Érvénytelen aktivációs kód');
       }
       
       const codeData = codeDoc.data();
+      console.log('[AuthService] Kód adatok:', JSON.stringify(codeData));
       
-      // HIBA kijavítása: Ne használjunk serverTimestamp() tömb elemekben
-      // Ehelyett JavaScript Date objektumot használunk
+      // Aktuális idő létrehozása
       const currentTime = new Date();
+      console.log('[AuthService] Aktuális idő:', currentTime);
       
-      // Eszköz információk - eltávolítjuk a FieldValue.serverTimestamp()-ot
+      // Eszköz információk
       const deviceInfo = {
         deviceId: userId,
-        // JAVÍTVA: JavaScript dátum objektumot használunk
         activatedAt: currentTime,
         deviceType: this._getDeviceType(),
         userAgent: navigator.userAgent
       };
       
-      // Ellenőrizzük, hogy első aktiválás-e vagy új eszköz hozzáadása
-      if (codeData.status === 'unused') {
-        // Első aktiválás
-        await codeRef.update({
-          status: 'active',
-          devices: [deviceInfo]
-        });
-      } else {
-        // Új eszköz hozzáadása
-        // Ellenőrizzük, hogy ez az eszköz már szerepel-e a listában
-        if (codeData.devices && codeData.devices.some(device => device.deviceId === userId)) {
-          return true; // Már aktiválva van ez az eszköz
+      console.log('[AuthService] Eszköz információk:', JSON.stringify(deviceInfo));
+      
+      try {
+        // Ellenőrizzük, hogy első aktiválás-e vagy új eszköz hozzáadása
+        if (codeData.status === 'unused') {
+          console.log('[AuthService] Első aktiválás...');
+          // Első aktiválás
+          await codeRef.update({
+            status: 'active',
+            devices: [deviceInfo]
+          });
+          console.log('[AuthService] Sikeres első aktiválás');
+        } else {
+          console.log('[AuthService] Már aktív kód, eszköz ellenőrzése...');
+          // Ellenőrizzük, hogy ez az eszköz már szerepel-e a listában
+          if (codeData.devices && codeData.devices.some(device => device.deviceId === userId)) {
+            console.log('[AuthService] Ez az eszköz már a listában van, nincs szükség frissítésre');
+            return true; // Már aktiválva van ez az eszköz
+          }
+          
+          console.log('[AuthService] Új eszköz hozzáadása a listához...');
+          // Új eszköz hozzáadása a listához (kézi összefűzéssel)
+          const updatedDevices = [...(codeData.devices || []), deviceInfo];
+          
+          // Frissítés a teljes tömbbel
+          await codeRef.update({
+            devices: updatedDevices
+          });
+          console.log('[AuthService] Sikeres eszköz hozzáadás');
         }
         
-        // Új eszköz hozzáadása a listához (kézi összefűzéssel, nem FieldValue.arrayUnion-nal)
-        const updatedDevices = [...(codeData.devices || []), deviceInfo];
-        
-        // Frissítés a teljes tömbbel
-        await codeRef.update({
-          devices: updatedDevices
-        });
+        return true;
+      } catch (updateError) {
+        console.error('[AuthService] Frissítési hiba részletesen:', updateError);
+        console.error('[AuthService] Hiba kód:', updateError.code);
+        console.error('[AuthService] Hiba üzenet:', updateError.message);
+        if (updateError.details) {
+          console.error('[AuthService] További részletek:', updateError.details);
+        }
+        throw new Error('Nem sikerült frissíteni a kódot: ' + updateError.message);
       }
-      
-      return true;
     } catch (error) {
-      console.error('Hiba a kód használtként jelölésekor:', error);
+      console.error('[AuthService] Hiba a kód használtként jelölésekor:', error);
       throw error;
     }
   }
@@ -175,7 +234,15 @@ class AuthService {
   // Hitelesítési adatok mentése
   async storeCredentials(user) {
     try {
-      const token = await user.getIdToken();
+      console.log('[AuthService] Hitelesítési adatok mentése:', user.uid);
+      
+      let token;
+      try {
+        token = await user.getIdToken();
+      } catch (tokenError) {
+        console.error('[AuthService] Hiba a token lekérésekor:', tokenError);
+        token = 'token-error';
+      }
       
       const authData = {
         userId: user.uid,
@@ -183,10 +250,16 @@ class AuthService {
         createdAt: Date.now()
       };
       
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(authData));
+      try {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(authData));
+        console.log('[AuthService] Hitelesítési adatok sikeresen mentve');
+      } catch (storageError) {
+        console.error('[AuthService] Hiba a localStorage írása közben:', storageError);
+      }
+      
       return authData;
     } catch (error) {
-      console.error('Hiba a hitelesítési adatok mentésekor:', error);
+      console.error('[AuthService] Hiba a hitelesítési adatok mentésekor:', error);
       throw error;
     }
   }
@@ -194,11 +267,13 @@ class AuthService {
   // Kijelentkezés
   async signOut() {
     try {
+      console.log('[AuthService] Kijelentkezés...');
       await this.auth.signOut();
       localStorage.removeItem(this.STORAGE_KEY);
+      console.log('[AuthService] Kijelentkezés és adattörlés sikeres');
       return true;
     } catch (error) {
-      console.error('Hiba a kijelentkezés során:', error);
+      console.error('[AuthService] Hiba a kijelentkezés során:', error);
       return false;
     }
   }
