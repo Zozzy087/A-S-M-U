@@ -1,13 +1,65 @@
-// AuthService - A kalandkönyv autentikációs szolgáltatása
+// AuthService - A kalandkönyv autentikációs szolgáltatása - Mobile-optimalizált verzió
 class AuthService {
   constructor() {
-    // Ellenőrizzük, hogy a Firebase sikeresen inicializálódott-e
+    console.log("AuthService konstruktor elindult");
+    
+    // Firebase inicializálásának ellenőrzése
     if (!window.firebaseApp || !window.firebaseApp.auth || !window.firebaseApp.db) {
       console.error('Firebase nem inicializálódott megfelelően');
-      // Alapértelmezett értékek, hogy ne kapjunk hibát később
-      this.auth = null; 
-      this.db = null;
+      
+      // Megpróbáljuk manuálisan inicializálni, ha a firebase globális objektum létezik
+      if (typeof firebase !== 'undefined') {
+        try {
+          console.log("Firebase SDK elérhető, kézi inicializálás megkísérlése...");
+          
+          // Firebase konfiguráció
+          const firebaseConfig = {
+            apiKey: "AIzaSyDxsN0vk0dAoDu7GYn2Bl8WoKDejy6q1vA",
+            authDomain: "a-s-m-u.firebaseapp.com",
+            projectId: "a-s-m-u",
+            storageBucket: "a-s-m-u.firebasestorage.app",
+            messagingSenderId: "317821756996",
+            appId: "1:317821756996:web:61d1b94b291080592abe11",
+            measurementId: "G-ENT3XNTKTE"
+          };
+          
+          // Ellenőrizzük, hogy az alkalmazás már inicializálva van-e
+          let firebaseApp;
+          try {
+            firebaseApp = firebase.app();
+            console.log("Firebase már inicializálva van");
+          } catch (e) {
+            console.log("Firebase még nincs inicializálva, most inicializáljuk");
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+          }
+          
+          // Szolgáltatások inicializálása
+          const auth = firebase.auth();
+          const db = firebase.firestore();
+          
+          // Globális objektumba mentés
+          window.firebaseApp = {
+            auth: auth,
+            db: db
+          };
+          
+          console.log("Firebase kézi inicializálása sikeres");
+          
+          this.auth = auth;
+          this.db = db;
+        } catch (initError) {
+          console.error("Firebase kézi inicializálása sikertelen:", initError);
+          // Alapértelmezett értékek, hogy ne kapjunk hibát később
+          this.auth = null; 
+          this.db = null;
+        }
+      } else {
+        console.error("Firebase SDK nem érhető el egyáltalán!");
+        this.auth = null; 
+        this.db = null;
+      }
     } else {
+      console.log("Firebase szolgáltatások sikeresen elérve");
       this.auth = window.firebaseApp.auth;
       this.db = window.firebaseApp.db;
     }
@@ -24,6 +76,31 @@ class AuthService {
           console.log('Nincs bejelentkezett felhasználó');
         }
       });
+    }
+    
+    // Mobilbarát beállítások Firebase-hez
+    if (this.db) {
+      try {
+        // Növelt cache méret és offline perzisztencia engedélyezése
+        // Ez segíthet a mobil kapcsolatok instabilitásának kezelésében
+        this.db.settings({
+          cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
+        });
+        
+        // Perzisztencia engedélyezése (offline használat)
+        this.db.enablePersistence({ synchronizeTabs: true })
+          .catch(err => {
+            if (err.code === 'failed-precondition') {
+              console.warn('Firestore perzisztencia nem engedélyezhető: több lap nyitva');
+            } else if (err.code === 'unimplemented') {
+              console.warn('A böngésző nem támogatja a Firestore perzisztenciát');
+            } else {
+              console.error('Firestore perzisztencia hiba:', err);
+            }
+          });
+      } catch (settingsError) {
+        console.warn('Firestore beállítások módosítása sikertelen:', settingsError);
+      }
     }
   }
   
@@ -80,6 +157,8 @@ class AuthService {
   // Ellenőrzi, van-e tárolt autentikáció
   async checkStoredAuth() {
     try {
+      console.log("checkStoredAuth() elindult");
+      
       // Ellenőrizzük, hogy a Firebase inicializálódott-e
       if (!this.auth || !this.db) {
         console.error('Firebase szolgáltatások nem érhetők el');
@@ -103,22 +182,34 @@ class AuthService {
           return this.auth.currentUser;
         }
         console.log('A bejelentkezett felhasználó különbözik a tároltól, kijelentkezés...');
-        await this.auth.signOut(); // Kiléptetjük, mert nem egyezik
+        
+        try {
+          await this.auth.signOut();
+        } catch (signOutError) {
+          console.error('Kijelentkezési hiba:', signOutError);
+          // Folytatjuk a következő lépéssel, ne szakadjon meg a folyamat
+        }
       }
       
       // Próbáljunk meg újra bejelentkezni
       console.log('Megpróbálunk bejelentkezni a tárolt adatokkal...');
       try {
-        await this.auth.signInAnonymously();
-        console.log('Névtelen bejelentkezés sikeres:', this.auth.currentUser?.uid);
+        const authResult = await this.auth.signInAnonymously();
         
-        // Ellenőrizzük, hogy a kapott UID egyezik-e a tároltal
-        if (this.auth.currentUser && this.auth.currentUser.uid === storedAuth.userId) {
-          console.log('Az új bejelentkezés sikeresen visszaállította az eszközt');
-          return this.auth.currentUser;
+        if (authResult && authResult.user) {
+          console.log('Névtelen bejelentkezés sikeres:', authResult.user.uid);
+          
+          // Ellenőrizzük, hogy a kapott UID egyezik-e a tároltal
+          if (authResult.user.uid === storedAuth.userId) {
+            console.log('Az új bejelentkezés sikeresen visszaállította az eszközt');
+            return authResult.user;
+          } else {
+            console.log('Az új bejelentkezés nem egyezik a tárolt adatokkal, törlés...');
+            this._removeFromStorage(this.STORAGE_KEY);
+            return null;
+          }
         } else {
-          console.log('Az új bejelentkezés nem egyezik a tárolt adatokkal, törlés...');
-          this._removeFromStorage(this.STORAGE_KEY);
+          console.error('Bejelentkezés sikeres volt, de nincs user objektum');
           return null;
         }
       } catch (error) {
@@ -132,177 +223,388 @@ class AuthService {
     }
   }
   
-  // Aktivációs kód ellenőrzése
+  // Aktivációs kód ellenőrzése - mobilra optimalizált
   async verifyActivationCode(code) {
     try {
+      console.log("verifyActivationCode() elindult, kód:", code);
+      
       // Ellenőrizzük, hogy a Firebase inicializálódott-e
       if (!this.auth || !this.db) {
         console.error('Firebase szolgáltatások nem érhetők el');
-        return { valid: false, message: 'Hiba: Firebase szolgáltatások nem érhetők el' };
+        return { 
+          valid: false, 
+          message: 'Hiba: Firebase szolgáltatások nem érhetők el. Frissítsd az oldalt és próbáld újra!' 
+        };
       }
       
-      console.log('Kód ellenőrzése:', code);
-      const codeDoc = await this.db.collection(this.CODES_COLLECTION).doc(code).get();
-      
-      if (!codeDoc.exists) {
-        console.log('A kód nem létezik:', code);
-        return { valid: false, message: 'Érvénytelen aktivációs kód' };
+      // Ellenőrizzük a kód formátumát
+      if (!code || code.length < 8) {
+        return { 
+          valid: false, 
+          message: 'Érvénytelen aktivációs kód formátum' 
+        };
       }
       
-      const codeData = codeDoc.data();
-      const currentUser = this.auth.currentUser;
+      // Ellenőrizzük, hogy van-e bejelentkezett felhasználó
+      if (!this.auth.currentUser) {
+        return { 
+          valid: false, 
+          message: 'Nincs bejelentkezett felhasználó. Frissítsd az oldalt és próbáld újra!' 
+        };
+      }
       
-      console.log('Kód adatok:', JSON.stringify(codeData));
-      console.log('Jelenlegi felhasználó:', currentUser?.uid);
+      console.log('Kód ellenőrzése az adatbázisban:', code);
       
-      // 1. Ellenőrzés: A kód állapota
-      if (codeData.status === 'unused') {
-        // Ez egy új, még nem használt kód - azonnal érvényesíthető
-        console.log('Új, nem használt kód');
-        return { valid: true };
-      } 
-      else if (codeData.status === 'active') {
-        // Ez egy már aktív kód, ellenőrizzük az eszközöket
-        console.log('Már aktív kód, eszközök ellenőrzése');
+      try {
+        // Timeout kezelés - mobilon lassabb lehet a kapcsolat
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Időtúllépés a kód ellenőrzésekor')), 10000)
+        );
         
-        // 1.a Ellenőrzés: Van-e devices tömb
-        const devices = codeData.devices || [];
+        // Adatbázis lekérés
+        const dbPromise = this.db.collection(this.CODES_COLLECTION).doc(code).get();
         
-        // 1.b Ellenőrzés: Ez az eszköz már szerepel-e a listában?
-        const deviceExists = devices.some(device => device.deviceId === currentUser?.uid);
-        if (deviceExists) {
-          // Ez az eszköz már hitelesítve van, engedélyezzük az újbóli használatot
-          console.log('Ez az eszköz már aktiválva van ezen a kódon');
-          return { valid: true, alreadyActivated: true };
+        // A kettő közül amelyik előbb teljesül
+        const codeDoc = await Promise.race([dbPromise, timeoutPromise]);
+        
+        if (!codeDoc.exists) {
+          console.log('A kód nem létezik:', code);
+          return { valid: false, message: 'Érvénytelen aktivációs kód' };
         }
         
-        // 1.c Ellenőrzés: Van-e még hely új eszköz számára?
-        const maxDevices = codeData.maxDevices || 3; // Alapértelmezetten 3
-        if (devices.length >= maxDevices) {
-          console.log('A kód elérte a maximum eszközszámot:', devices.length, '>=', maxDevices);
+        const codeData = codeDoc.data();
+        const currentUser = this.auth.currentUser;
+        
+        console.log('Kód adatok:', JSON.stringify(codeData));
+        console.log('Jelenlegi felhasználó:', currentUser?.uid);
+        
+        // 1. Ellenőrzés: A kód állapota
+        if (codeData.status === 'unused') {
+          // Ez egy új, még nem használt kód - azonnal érvényesíthető
+          console.log('Új, nem használt kód');
+          return { valid: true };
+        } 
+        else if (codeData.status === 'active') {
+          // Ez egy már aktív kód, ellenőrizzük az eszközöket
+          console.log('Már aktív kód, eszközök ellenőrzése');
+          
+          // 1.a Ellenőrzés: Van-e devices tömb
+          const devices = codeData.devices || [];
+          
+          // 1.b Ellenőrzés: Ez az eszköz már szerepel-e a listában?
+          const deviceExists = devices.some(device => device.deviceId === currentUser?.uid);
+          if (deviceExists) {
+            // Ez az eszköz már hitelesítve van, engedélyezzük az újbóli használatot
+            console.log('Ez az eszköz már aktiválva van ezen a kódon');
+            return { valid: true, alreadyActivated: true };
+          }
+          
+          // 1.c Ellenőrzés: Van-e még hely új eszköz számára?
+          const maxDevices = codeData.maxDevices || 3; // Alapértelmezetten 3
+          if (devices.length >= maxDevices) {
+            console.log('A kód elérte a maximum eszközszámot:', devices.length, '>=', maxDevices);
+            return { 
+              valid: false, 
+              message: `Ez a kód már elérte a maximum használható eszközök számát (${maxDevices})` 
+            };
+          }
+          
+          // Ha ideáig eljutottunk, a kód egy új eszközön aktiválható
+          console.log('A kód aktiválható új eszközön');
+          return { valid: true };
+        } 
+        else {
+          // Bármilyen más állapot (pl. "expired", ha később bevezetjük)
+          console.log('A kód nem használható állapotban van:', codeData.status);
+          return { valid: false, message: 'Ez a kód már nem használható' };
+        }
+      } catch (dbError) {
+        console.error('Adatbázis hiba a kód ellenőrzésekor:', dbError);
+        
+        // Speciális hibaüzenetek a különböző esetekre
+        if (dbError.message && dbError.message.includes('timeout')) {
           return { 
             valid: false, 
-            message: `Ez a kód már elérte a maximum használható eszközök számát (${maxDevices})` 
+            message: 'Időtúllépés a szerverkapcsolatkor. Ellenőrizd az internetkapcsolatot és próbáld újra!' 
           };
         }
         
-        // Ha ideáig eljutottunk, a kód egy új eszközön aktiválható
-        console.log('A kód aktiválható új eszközön');
-        return { valid: true };
-      } 
-      else {
-        // Bármilyen más állapot (pl. "expired", ha később bevezetjük)
-        console.log('A kód nem használható állapotban van:', codeData.status);
-        return { valid: false, message: 'Ez a kód már nem használható' };
+        if (dbError.code === 'permission-denied') {
+          return { 
+            valid: false, 
+            message: 'Nincs jogosultságod az aktivációs kód ellenőrzéséhez' 
+          };
+        }
+        
+        return { 
+          valid: false, 
+          message: `Hiba a kód ellenőrzésekor: ${dbError.message || 'Adatbázis hiba'}` 
+        };
       }
     } catch (error) {
-      console.error('Hiba a kód ellenőrzésekor:', error);
-      return { valid: false, message: 'Hiba történt a kód ellenőrzésekor' };
+      console.error('Általános hiba a kód ellenőrzésekor:', error);
+      return { 
+        valid: false, 
+        message: `Hiba történt a kód ellenőrzésekor: ${error.message || 'Ismeretlen hiba'}` 
+      };
     }
   }
 
-  // Névtelen bejelentkezés
+  // Névtelen bejelentkezés - mobilra optimalizált
   async signInAnonymously() {
     try {
+      console.log("signInAnonymously() elindult");
+      
       // Ellenőrizzük, hogy a Firebase inicializálódott-e
       if (!this.auth) {
         console.error('Firebase Auth nem érhető el');
         throw new Error('Firebase Auth nem érhető el');
       }
       
+      // Ellenőrizzük, hogy már van-e bejelentkezett felhasználó
+      if (this.auth.currentUser) {
+        console.log('Már van bejelentkezett felhasználó:', this.auth.currentUser.uid);
+        return { user: this.auth.currentUser };
+      }
+      
       console.log('Névtelen bejelentkezés kísérlet...');
-      const result = await this.auth.signInAnonymously();
+      
+      // Timeout kezelés
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Időtúllépés a bejelentkezés során')), 15000)
+      );
+      
+      // Firebase bejelentkezés
+      const authPromise = this.auth.signInAnonymously();
+      
+      // Amelyik előbb teljesül
+      const result = await Promise.race([authPromise, timeoutPromise]);
+      
       console.log('Névtelen bejelentkezés sikeres:', result.user?.uid);
       return result;
     } catch (error) {
       console.error('Névtelen bejelentkezési hiba:', error);
+      
+      // Speciális hibaüzenetek a gyakori esetekre
+      if (error.code === 'auth/network-request-failed') {
+        throw new Error('Nincs internetkapcsolat a bejelentkezéshez');
+      }
+      
+      if (error.message && error.message.includes('timeout')) {
+        throw new Error('Időtúllépés a bejelentkezés során. Ellenőrizd az internetkapcsolatot!');
+      }
+      
       throw error;
     }
   }
   
-  // A kódot megjelöli aktívként és hozzáadja az eszközt
+  // A kódot megjelöli aktívként és hozzáadja az eszközt - mobilra optimalizált
   async markCodeAsActive(code, userId) {
     try {
+      console.log("markCodeAsActive() elindult");
+      
       // Ellenőrizzük, hogy a Firebase inicializálódott-e
       if (!this.db) {
         console.error('Firebase Firestore nem érhető el');
         throw new Error('Firebase Firestore nem érhető el');
       }
       
+      // Érvényes paraméterek ellenőrzése
+      if (!code || !userId) {
+        throw new Error('Érvénytelen paraméterek: kód vagy userId hiányzik');
+      }
+      
       console.log('Kód aktiválása:', code, 'eszköz:', userId);
+      
+      // Kód dokumentum lekérése
       const codeRef = this.db.collection(this.CODES_COLLECTION).doc(code);
-      const codeDoc = await codeRef.get();
       
-      if (!codeDoc.exists) {
-        console.error('A kód nem létezik:', code);
-        throw new Error('A kód nem létezik');
-      }
-      
-      const codeData = codeDoc.data();
-      const currentDevices = codeData.devices || [];
-      
-      console.log('Jelenlegi eszközök:', JSON.stringify(currentDevices));
-      
-      const deviceExists = currentDevices.some(device => device.deviceId === userId);
-      
-      // Ha az eszköz már szerepel a listában, nincs szükség frissítésre
-      if (deviceExists) {
-        console.log('Ez az eszköz már szerepel a listában, nincs szükség frissítésre');
-        return true;
-      }
-      
-      // Új eszköz hozzáadása
-      const updatedDevices = [
-        ...currentDevices,
-        {
-          deviceId: userId,
-          activatedAt: this.db.firestore.FieldValue.serverTimestamp()
+      try {
+        // Timeout kezelés
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Időtúllépés az adatbázis elérésekor')), 10000)
+        );
+        
+        // Adatbázis lekérdezés
+        const dbPromise = codeRef.get();
+        
+        // Amelyik előbb teljesül
+        const codeDoc = await Promise.race([dbPromise, timeoutPromise]);
+        
+        if (!codeDoc.exists) {
+          console.error('A kód nem létezik:', code);
+          throw new Error('A kód nem létezik az adatbázisban');
         }
-      ];
-      
-      console.log('Frissített eszközlista:', JSON.stringify(updatedDevices));
-      
-      // Kód státuszának és eszközlistájának frissítése
-      await codeRef.update({
-        status: 'active',  // "unused" → "active"
-        devices: updatedDevices
-      });
-      
-      console.log('Kód sikeresen aktiválva, eszköz hozzáadva');
-      return true;
+        
+        const codeData = codeDoc.data();
+        const currentDevices = codeData.devices || [];
+        
+        console.log('Jelenlegi eszközök:', JSON.stringify(currentDevices));
+        
+        // Ellenőrizzük, hogy ez az eszköz már szerepel-e
+        const deviceExists = currentDevices.some(device => device.deviceId === userId);
+        
+        // Ha az eszköz már szerepel a listában, nincs szükség frissítésre
+        if (deviceExists) {
+          console.log('Ez az eszköz már szerepel a listában, nincs szükség frissítésre');
+          return true;
+        }
+        
+        // Ellenőrizzük, hogy nincs-e túl sok eszköz
+        const maxDevices = codeData.maxDevices || 3;
+        if (currentDevices.length >= maxDevices) {
+          throw new Error(`A kód már elérte a maximum használható eszközök számát (${maxDevices})`);
+        }
+        
+        // Új eszköz hozzáadása
+        const updatedDevices = [
+          ...currentDevices,
+          {
+            deviceId: userId,
+            activatedAt: this.db.firestore.FieldValue.serverTimestamp(),
+            // Eszköz típus információk tárolása
+            deviceType: /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            userAgent: navigator.userAgent.substring(0, 100) // Limitált hosszúság
+          }
+        ];
+        
+        console.log('Frissített eszközlista:', JSON.stringify(updatedDevices));
+        
+        // Kód státuszának és eszközlistájának frissítése
+        try {
+          // Transaction használata a konkurenciakezeléshez
+          await this.db.runTransaction(async (transaction) => {
+            // Újra lekérjük a dokumentumot a tranzakción belül
+            const codeSnapshot = await transaction.get(codeRef);
+            
+            if (!codeSnapshot.exists) {
+              throw new Error('A kód nem létezik a tranzakció során');
+            }
+            
+            // Aktuális adatok a tranzakción belül
+            const latestData = codeSnapshot.data();
+            const latestDevices = latestData.devices || [];
+            
+            // Újra ellenőrizzük, hogy az eszköz már szerepel-e
+            const deviceExistsInTransaction = latestDevices.some(device => device.deviceId === userId);
+            
+            if (deviceExistsInTransaction) {
+              console.log('Az eszköz már szerepel (tranzakción belüli ellenőrzés)');
+              return; // Kilépünk a tranzakcióból változtatás nélkül
+            }
+            
+            // Ellenőrizzük a max eszközök számát újra
+            if (latestDevices.length >= maxDevices) {
+              throw new Error(`A kód már elérte a maximum eszközszámot (${maxDevices}) a tranzakción belül`);
+            }
+            
+            // Új eszköz hozzáadása a legfrissebb állapothoz
+            const updatedDevicesInTransaction = [
+              ...latestDevices,
+              {
+                deviceId: userId,
+                activatedAt: this.db.firestore.FieldValue.serverTimestamp(),
+                deviceType: /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+                userAgent: navigator.userAgent.substring(0, 100)
+              }
+            ];
+            
+            // Frissítjük az adatbázist
+            transaction.update(codeRef, {
+              status: 'active',  // "unused" → "active"
+              devices: updatedDevicesInTransaction,
+              lastUpdated: this.db.firestore.FieldValue.serverTimestamp()
+            });
+          });
+          
+          console.log('Kód sikeresen aktiválva tranzakcióval, eszköz hozzáadva');
+          return true;
+        } catch (transactionError) {
+          console.error('Tranzakciós hiba:', transactionError);
+          
+          // Hiba esetén egyszerű update-tel próbálkozunk
+          await codeRef.update({
+            status: 'active',  // "unused" → "active"
+            devices: updatedDevices,
+            lastUpdated: this.db.firestore.FieldValue.serverTimestamp()
+          });
+          
+          console.log('Kód sikeresen aktiválva egyszerű update-tel, eszköz hozzáadva');
+          return true;
+        }
+      } catch (dbError) {
+        console.error('Adatbázis hiba a kód aktiválásakor:', dbError);
+        
+        // Speciális hibaüzenetek
+        if (dbError.code === 'permission-denied') {
+          throw new Error('Nincs jogosultságod a kód aktiválásához');
+        }
+        
+        if (dbError.message && dbError.message.includes('timeout')) {
+          throw new Error('Időtúllépés a szerverkapcsolatkor. Ellenőrizd az internetkapcsolatot!');
+        }
+        
+        throw new Error(`Adatbázis hiba: ${dbError.message || 'Ismeretlen'}`);
+      }
     } catch (error) {
-      console.error('Hiba a kód aktiválásakor:', error);
+      console.error('Általános hiba a kód aktiválásakor:', error);
       throw error;
     }
   }
   
-  // Hitelesítési adatok mentése
+  // Hitelesítési adatok mentése - mobilra optimalizált
   async storeCredentials(user) {
     try {
+      console.log("storeCredentials() elindult");
+      
       // Ellenőrizzük, hogy a paraméter érvényes-e
       if (!user || !user.uid) {
         console.error('Érvénytelen felhasználó:', user);
-        throw new Error('Érvénytelen felhasználó');
+        throw new Error('Érvénytelen felhasználó objektum');
       }
       
       console.log('Hitelesítési adatok mentése:', user.uid);
       
       try {
-        const token = await user.getIdToken();
+        // Token lekérése 15 másodperces időkorláttal
+        const tokenPromise = user.getIdToken();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Időtúllépés a token lekérésénél')), 15000)
+        );
         
+        const token = await Promise.race([tokenPromise, timeoutPromise]);
+        
+        // Bővített autentikációs adatok, többszörös redundanciával
         const authData = {
           userId: user.uid,
           token: token,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          // Eszközazonosítási információk
+          deviceInfo: {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            isMobile: /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
+          },
+          // Biztonsági jelzők
+          securityFlags: {
+            storedAt: new Date().toISOString()
+          }
         };
         
         // Biztonságos mentés a localStorage-ba
         const success = this._saveToStorage(this.STORAGE_KEY, authData);
         
+        // Cookie-ba is elmentjük (fallback)
+        try {
+          document.cookie = `${this.STORAGE_KEY}_uid=${user.uid}; path=/; max-age=31536000; SameSite=Strict`;
+        } catch (cookieError) {
+          console.warn('Cookie mentési hiba:', cookieError);
+        }
+        
         if (success) {
           console.log('Hitelesítési adatok sikeresen mentve');
         } else {
-          console.warn('Nem sikerült menteni a hitelesítési adatokat, de folytatjuk');
+          console.warn('Nem sikerült menteni a hitelesítési adatokat localStorage-ba, de folytatjuk');
         }
         
         return authData;
@@ -312,10 +614,20 @@ class AuthService {
         // Ha a token lekérés hibával jár, mentsük legalább a userId-t
         const fallbackData = {
           userId: user.uid,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          fallback: true,
+          errorMessage: tokenError.message || 'Ismeretlen token hiba'
         };
         
         this._saveToStorage(this.STORAGE_KEY, fallbackData);
+        
+        // Cookie-ba is elmentjük (fallback)
+        try {
+          document.cookie = `${this.STORAGE_KEY}_uid=${user.uid}; path=/; max-age=31536000; SameSite=Strict`;
+        } catch (cookieError) {
+          console.warn('Cookie mentési hiba:', cookieError);
+        }
+        
         console.log('Egyszerűsített hitelesítési adatok mentve');
         
         return fallbackData;
@@ -326,18 +638,37 @@ class AuthService {
     }
   }
   
-  // Kijelentkezés
+  // Kijelentkezés - mobilra optimalizált
   async signOut() {
     try {
+      console.log("signOut() elindult");
+      
       // Ellenőrizzük, hogy a Firebase inicializálódott-e
       if (!this.auth) {
         console.error('Firebase Auth nem érhető el');
         return false;
       }
       
-      console.log('Kijelentkezés...');
-      await this.auth.signOut();
+      console.log('Kijelentkezés megkezdése...');
+      
+      try {
+        await this.auth.signOut();
+        console.log('Firebase kijelentkezés sikeres');
+      } catch (signOutError) {
+        console.error('Hiba a Firebase kijelentkezéskor:', signOutError);
+        // Folytatjuk a többi lépéssel attól függetlenül
+      }
+      
+      // Lokális adatok törlése
       this._removeFromStorage(this.STORAGE_KEY);
+      
+      // Cookie törlése
+      try {
+        document.cookie = `${this.STORAGE_KEY}_uid=; path=/; max-age=0; SameSite=Strict`;
+      } catch (cookieError) {
+        console.warn('Cookie törlési hiba:', cookieError);
+      }
+      
       console.log('Kijelentkezés és adattörlés sikeres');
       return true;
     } catch (error) {
@@ -348,4 +679,9 @@ class AuthService {
 }
 
 // Exportáljuk a szolgáltatást
-window.authService = new AuthService();
+if (!window.authService) {
+  console.log("AuthService példány létrehozása");
+  window.authService = new AuthService();
+} else {
+  console.log("AuthService példány már létezik");
+}
