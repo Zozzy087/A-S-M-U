@@ -1,4 +1,4 @@
-// Aktivációs UI kezelő - Javított kód formázás!
+// Aktivációs UI kezelő - JAVÍTOTT - Kódformázás eltávolítva
 class ActivationUI {
   constructor() {
     // Fontos: Biztosítsd, hogy a window.authService létezzen, mielőtt ez lefut
