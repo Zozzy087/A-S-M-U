@@ -164,17 +164,37 @@ class ActivationUI {
         return;
       }
       
-      // Sikeres ellenőrzés, bejelentkezés
-      this._showMessage('Sikeres aktiváció! Bejelentkezés...', true);
-      
-      // Névtelen bejelentkezés
-      const userCredential = await this.authService.signInAnonymously();
-      
-      // Kód megjelölése használtként
-      await this.authService.markCodeAsUsed(code, userCredential.user.uid);
-      
-      // Hitelesítés mentése
-      await this.authService.storeCredentials(userCredential.user);
+      // Ha a kód érvényes, de az eszköz már aktiválva van
+      if (verification.alreadyActivated) {
+        this._showMessage('Eszköz sikeresen azonosítva!', true);
+        
+        // Csak ellenőrizzük, hogy a felhasználó be van-e jelentkezve
+        const currentUser = this.authService.auth.currentUser;
+        if (!currentUser) {
+          // Ha valami miatt nincs bejelentkezve, jelentkeztessük be újra
+          await this.authService.signInAnonymously();
+        }
+        
+        // Frissítsük a hitelesítési adatokat a local storage-ban
+        await this.authService.storeCredentials(this.authService.auth.currentUser);
+      } else {
+        // Új aktiválás (első eszköz vagy új eszköz hozzáadása)
+        this._showMessage('Sikeres aktiváció! Bejelentkezés...', true);
+        
+        // Névtelen bejelentkezés, ha szükséges
+        let userCredential;
+        if (!this.authService.auth.currentUser) {
+          userCredential = await this.authService.signInAnonymously();
+        } else {
+          userCredential = { user: this.authService.auth.currentUser };
+        }
+        
+        // Kód megjelölése használtként
+        await this.authService.markCodeAsActive(code, userCredential.user.uid);
+        
+        // Hitelesítés mentése
+        await this.authService.storeCredentials(userCredential.user);
+      }
       
       // UI frissítése
       this.isActivated = true;

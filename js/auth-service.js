@@ -64,18 +64,48 @@ class AuthService {
       }
       
       const codeData = codeDoc.data();
+      const currentUser = this.auth.currentUser;
       
-      if (codeData.status === 'used') {
-        return { valid: false, message: 'Ez a kód már fel lett használva' };
+      // 1. Ellenőrzés: A kód állapota
+      if (codeData.status === 'unused') {
+        // Ez egy új, még nem használt kód - azonnal érvényesíthető
+        return { valid: true };
+      } 
+      else if (codeData.status === 'active') {
+        // Ez egy már aktív kód, ellenőrizzük az eszközöket
+        
+        // 1.a Ellenőrzés: Van-e devices tömb
+        const devices = codeData.devices || [];
+        
+        // 1.b Ellenőrzés: Ez az eszköz már szerepel-e a listában?
+        const deviceExists = devices.some(device => device.deviceId === currentUser?.uid);
+        if (deviceExists) {
+          // Ez az eszköz már hitelesítve van, engedélyezzük az újbóli használatot
+          return { valid: true, alreadyActivated: true };
+        }
+        
+        // 1.c Ellenőrzés: Van-e még hely új eszköz számára?
+        const maxDevices = codeData.maxDevices || 3; // Alapértelmezetten 3
+        if (devices.length >= maxDevices) {
+          return { 
+            valid: false, 
+            message: `Ez a kód már elérte a maximum használható eszközök számát (${maxDevices})` 
+          };
+        }
+        
+        // Ha ideáig eljutottunk, a kód egy új eszközön aktiválható
+        return { valid: true };
+      } 
+      else {
+        // Bármilyen más állapot (pl. "expired", ha később bevezetjük)
+        return { valid: false, message: 'Ez a kód már nem használható' };
       }
-      
-      return { valid: true };
     } catch (error) {
       console.error('Hiba a kód ellenőrzésekor:', error);
       return { valid: false, message: 'Hiba történt a kód ellenőrzésekor' };
     }
   }
-  
+
   // Névtelen bejelentkezés
   async signInAnonymously() {
     try {
@@ -86,21 +116,43 @@ class AuthService {
     }
   }
   
-  // Kód megjelölése használtként
-  async markCodeAsUsed(code, userId) {
+  // A kódot megjelöli aktívként és hozzáadja az eszközt
+  async markCodeAsActive(code, userId) {
     try {
       const codeRef = this.db.collection(this.CODES_COLLECTION).doc(code);
+      const codeDoc = await codeRef.get();
       
-      // Atomikusan frissítjük a dokumentumot
+      if (!codeDoc.exists) {
+        throw new Error('A kód nem létezik');
+      }
+      
+      const codeData = codeDoc.data();
+      const currentDevices = codeData.devices || [];
+      const deviceExists = currentDevices.some(device => device.deviceId === userId);
+      
+      // Ha az eszköz már szerepel a listában, nincs szükség frissítésre
+      if (deviceExists) {
+        return true;
+      }
+      
+      // Új eszköz hozzáadása
+      const updatedDevices = [
+        ...currentDevices,
+        {
+          deviceId: userId,
+          activatedAt: this.db.firestore.FieldValue.serverTimestamp()
+        }
+      ];
+      
+      // Kód státuszának és eszközlistájának frissítése
       await codeRef.update({
-        status: 'used',
-        usedBy: userId,
-        usedAt: firebase.firestore.FieldValue.serverTimestamp()
+        status: 'active',  // "unused" → "active"
+        devices: updatedDevices
       });
       
       return true;
     } catch (error) {
-      console.error('Hiba a kód használtként jelölésekor:', error);
+      console.error('Hiba a kód aktiválásakor:', error);
       throw error;
     }
   }

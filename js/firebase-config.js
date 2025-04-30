@@ -21,6 +21,3 @@ window.firebaseApp = {
   auth: auth,
   db: db
 };
-
-// Konzolba írjuk a konfigurációt ellenőrzésre
-console.log("Firebase config loaded:", firebaseConfig);

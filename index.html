@@ -158,44 +158,44 @@
   <script src="flipbook-engine.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        // Betöltő képernyő
-        const loadingScreen = document.getElementById('loading-screen');
-        
-        // Aktiváció ellenőrzése
-        const isActivated = await window.activationUI.initialize();
-        
-        // Ha aktiválva van, folytatjuk a normál inicializálást
-        if (isActivated) {
-          // FlipbookEngine inicializálása
-          const flipbook = new FlipbookEngine({
-            containerId: 'book-container',
-            totalPages: 300,
-            soundPath: 'sounds/pageturn-102978.mp3'
-          });
-          
-          // Betöltő képernyő elrejtése
-          if (loadingScreen) {
-            setTimeout(() => {
-              loadingScreen.style.opacity = '0';
-              setTimeout(() => {
-                loadingScreen.style.display = 'none';
-              }, 500);
-            }, 800);
-          }
-          
-          console.log('Minden sikeresen inicializálva');
-        } else {
-          // Ha nincs aktiválva, elrejtjük a betöltő képernyőt, 
-          // hogy látszódjon az aktivációs űrlap
-          if (loadingScreen) {
+  try {
+    // Betöltő képernyő
+    const loadingScreen = document.getElementById('loading-screen');
+    
+    // Aktiváció ellenőrzése
+    const isActivated = await window.activationUI.initialize();
+    
+    // Ha aktiválva van, folytatjuk a normál inicializálást
+    if (isActivated) {
+      // FlipbookEngine inicializálása
+      const flipbook = new FlipbookEngine({
+        containerId: 'book-container',
+        totalPages: 300,
+        soundPath: 'sounds/pageturn-102978.mp3'
+      });
+      
+      // Betöltő képernyő elrejtése
+      if (loadingScreen) {
+        setTimeout(() => {
+          loadingScreen.style.opacity = '0';
+          setTimeout(() => {
             loadingScreen.style.display = 'none';
-          }
-        }
-      } catch (error) {
-        console.error('Hiba:', error);
+          }, 500);
+        }, 800);
       }
-    });
+      
+      console.log('Minden sikeresen inicializálva');
+    } else {
+      // Ha nincs aktiválva, elrejtjük a betöltő képernyőt,
+      // hogy látszódjon az aktivációs űrlap
+      if (loadingScreen) {
+        loadingScreen.style.display = 'none';
+      }
+    }
+  } catch (error) {
+    console.error('Hiba:', error);
+  }
+});
   </script>
   
     <!-- === INSTALL PROMPT HANDLER === -->

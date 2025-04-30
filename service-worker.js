@@ -1,5 +1,5 @@
 // ► 1. Cache név verzió: ha módosítasz valamit, növeld pl. '…-v2'-re
-const CACHE_NAME = 'kalandkonyv-cache-v5';
+const CACHE_NAME = 'kalandkonyv-cache-v6';
 
 // ► 2. Statikus fájlok (install fázisban ezeket töltjük be először)
 const STATIC_ASSETS = [
@@ -77,7 +77,7 @@ self.addEventListener('activate', event => {
 // ► 8. Fetch – kéréskezelés
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-
+  
   // Firebase API kérések - mindig hálózatról
   if (url.hostname.includes('firestore.googleapis.com') || 
       url.hostname.includes('firebase') ||
