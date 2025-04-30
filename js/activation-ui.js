@@ -1,4 +1,4 @@
-// Aktivációs UI kezelő
+// Aktivációs UI kezelő - Frissített verzió több eszköz támogatásával
 class ActivationUI {
   constructor() {
     // Fontos: Biztosítsd, hogy a window.authService létezzen, mielőtt ez lefut
@@ -63,6 +63,7 @@ class ActivationUI {
             <button id="activate-btn">Aktiválás</button>
           </div>
           <p id="activation-message" class="activation-message"></p>
+          <p class="activation-info"><small>Egy aktivációs kóddal a könyv akár <strong>3 különböző</strong> eszközön is használható.</small></p>
         </div>
       </div>
     `;
@@ -139,7 +140,6 @@ class ActivationUI {
             cursor: not-allowed;
           }
 
-
           .activation-message {
             min-height: 1.5rem;
             margin-top: 1rem; /* Hozzáadva egy kis térköz */
@@ -152,6 +152,16 @@ class ActivationUI {
 
           .activation-message.success {
             color: #55ff55;
+          }
+          
+          .activation-info {
+            font-size: 0.9rem;
+            margin-top: 1.5rem;
+            color: #ccc;
+          }
+          
+          .activation-info strong {
+            color: #9b30ff;
           }
         `;
         document.head.appendChild(style);
@@ -175,8 +185,34 @@ class ActivationUI {
         codeInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') this._handleActivation();
         });
+        // Formázási segítség a kód beírásához
+        codeInput.addEventListener('input', (e) => {
+          this._formatActivationCode(e.target);
+        });
     } else {
         console.error("Aktivációs kód beviteli mező (activation-code) nem található!");
+    }
+  }
+  
+  // Aktivációs kód formázása X-X-X formátumra
+  _formatActivationCode(input) {
+    // Csak betűk és számok megtartása
+    let code = input.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    
+    // Formázás X-X-X alakra
+    if (code.length > 4) {
+      code = code.slice(0, 4) + '-' + code.slice(4);
+    }
+    if (code.length > 9) {
+      code = code.slice(0, 9) + '-' + code.slice(9);
+    }
+    
+    // Max 14 karakter (XXX-XXX-XXX)
+    code = code.slice(0, 14);
+    
+    // Érték frissítése, ha változott
+    if (input.value !== code) {
+      input.value = code;
     }
   }
 
@@ -198,7 +234,7 @@ class ActivationUI {
     }
   }
 
-  // Aktivációs kódkezelés - MÓDOSÍTOTT VERZIÓ (Bejelentkezés előrehozva)
+  // Aktivációs kódkezelés (többeszközös támogatással)
   async _handleActivation() {
     const codeInput = document.getElementById('activation-code');
     // Biztosítjuk, hogy az authService létezzen
@@ -215,7 +251,6 @@ class ActivationUI {
         return;
     }
     const code = codeInput.value.trim().toUpperCase();
-
 
     if (!code) {
       this._showMessage('Kérlek add meg az aktivációs kódot', 'error');
@@ -267,10 +302,10 @@ class ActivationUI {
 
       if (!verification.valid) {
         this._showMessage(verification.message || 'Érvénytelen aktivációs kód', 'error');
-         if(activateBtn) {
-             activateBtn.disabled = false;
-             activateBtn.textContent = 'Aktiválás';
-          }
+        if(activateBtn) {
+            activateBtn.disabled = false;
+            activateBtn.textContent = 'Aktiválás';
+        }
         return;
       }
 
@@ -280,10 +315,9 @@ class ActivationUI {
         // A currentUser biztosan létezik ekkorra
         // Frissítsük a hitelesítési adatokat a local storage-ban (redundáns lehet, de biztosít)
         await this.authService.storeCredentials(currentUser);
-
       } else {
         // Új aktiválás (első eszköz vagy új eszköz hozzáadása)
-        this._showMessage('Sikeres aktiváció! Eszköz hozzáadása...', 'success');
+        this._showMessage('Sikeres aktiváció! Eszköz regisztrálva...', 'success');
         // A currentUser biztosan létezik ekkorra
         // Kód megjelölése aktívként és eszköz hozzáadása
         await this.authService.markCodeAsActive(code, currentUser.uid);
@@ -296,16 +330,15 @@ class ActivationUI {
 
       // Jelezzük a sikert az inicializáló kódnak (pl. az index.html-ben)
       // Létrehozunk egy egyedi eseményt
-       const activationSuccessEvent = new Event('activationSuccess');
-       document.dispatchEvent(activationSuccessEvent);
-
+      const activationSuccessEvent = new Event('activationSuccess');
+      document.dispatchEvent(activationSuccessEvent);
 
       // Kis szünet a sikeres üzenet megjelenítéséhez, majd UI eltüntetése
       setTimeout(() => {
         this.remove(); // UI eltávolítása a remove() függvénnyel
-         console.log("Aktivációs felület eltávolítva.");
-         // Az alkalmazás indítását most már az index.html-ben lévő
-         // 'activationSuccess' eseményre figyelő kódnak kellene kezelnie.
+        console.log("Aktivációs felület eltávolítva.");
+        // Az alkalmazás indítását most már az index.html-ben lévő
+        // 'activationSuccess' eseményre figyelő kódnak kellene kezelnie.
       }, 1500); // Késleltetés a sikeres üzenet olvashatóságáért
 
     } catch (error) {
