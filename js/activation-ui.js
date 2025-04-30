@@ -1,120 +1,77 @@
-// Aktivációs UI kezelő - Javított verzió mobil kompatibilitással
+// Aktivációs UI kezelő - Javított kód formázás!
 class ActivationUI {
   constructor() {
-    console.log("ActivationUI konstruktor elindult");
-    this.authService = null;
+    // Fontos: Biztosítsd, hogy a window.authService létezzen, mielőtt ez lefut
+    // (Ezt az auth-service.js fájl végén lévő window.authService = new AuthService(); sor intézi)
+    if (!window.authService) {
+       console.error("AuthService még nem inicializálódott, amikor az ActivationUI létrejött!");
+       // Itt kezelhetnéd ezt a hibát, pl. egy késleltetéssel vagy hibaüzenettel
+    }
+    this.authService = window.authService;
     this.isActivated = false;
     this.activationContainer = null;
-    this.initRetries = 0;
-    this.maxRetries = 3;
   }
 
-  // Aktivációs UI inicializálása - Javított verzió mobil támogatással
+  // Aktivációs UI inicializálása
   async initialize() {
-    console.log("ActivationUI.initialize() elindult");
-    
-    try {
-      // Ellenőrizzük, hogy a window.authService létezik-e, ha nem, várunk egy kicsit
-      if (!window.authService) {
-        console.log("AuthService még nem elérhető, várakozás...");
-        
-        // Maximum 3 próbálkozás, 1 másodperc szünettel
-        if (this.initRetries < this.maxRetries) {
-          this.initRetries++;
-          console.log(`Újrapróbálkozás ${this.initRetries}/${this.maxRetries}...`);
-          
-          return new Promise(resolve => {
-            setTimeout(async () => {
-              if (window.authService) {
-                this.authService = window.authService;
-                console.log("AuthService most már elérhető");
-                const result = await this.initialize();
-                resolve(result);
-              } else {
-                console.error("AuthService továbbra sem elérhető");
-                this._createActivationUI(); // Visszatérünk az aktivációs UI-hoz hibakezeléssel
-                resolve(false);
-              }
-            }, 1000); // 1 másodperc várakozás
-          });
-        } else {
-          console.error("AuthService nem található több kísérlet után sem");
-          // Létrehozzuk az aktivációs UI-t, de belerakunk egy hibaüzenetet
-          this._createActivationUI(true);
-          return false;
-        }
-      }
-
-      // Ha ide eljutunk, akkor az authService létezik
-      this.authService = window.authService;
-      console.log("AuthService sikeresen elérve", !!this.authService);
-
-      // Ellenőrizzük, hogy már hitelesítve van-e
-      try {
-        const user = await this.authService.checkStoredAuth();
-        console.log("Tárolt hitelesítés ellenőrzése:", !!user);
-
-        if (user) {
-          console.log('Felhasználó már aktiválva van:', user.uid);
-          this.isActivated = true;
-          this.remove(); // Ha már aktiválva van, távolítsuk el a UI-t, ha esetleg látható maradt
-          return true;
-        }
-      } catch (authCheckError) {
-        console.error("Hiba a tárolt hitelesítés ellenőrzésekor:", authCheckError);
-      }
-
-      // Aktivációs UI létrehozása és megjelenítése, ha még nincs aktiválva
-      this._createActivationUI();
-      return false;
-    } catch (error) {
-      console.error("Súlyos hiba az initialize() függvényben:", error);
-      this._createActivationUI(true);
-      return false;
+    // Ellenőrizzük, hogy az authService elérhető-e
+    if (!this.authService) {
+        console.error("AuthService nem elérhető az initialize hívásakor.");
+        // Dönthetsz úgy, hogy hibát dobsz, vagy megpróbálod később újrahívni
+        return false; // Jelezzük, hogy nem sikerült az inicializálás
     }
+
+    // Ellenőrizzük, hogy már hitelesítve van-e
+    const user = await this.authService.checkStoredAuth();
+
+    if (user) {
+      console.log('Felhasználó már aktiválva van:', user.uid);
+      this.isActivated = true;
+      this.remove(); // Ha már aktiválva van, távolítsuk el a UI-t, ha esetleg látható maradt
+      return true;
+    }
+
+    // Aktivációs UI létrehozása és megjelenítése, ha még nincs aktiválva
+    this._createActivationUI();
+    return false;
   }
 
-  // Aktivációs UI létrehozása - kibővített hibajelzéssel
-  _createActivationUI(showServiceError = false) {
-    console.log("_createActivationUI() elindult, hibajelzés:", showServiceError);
-    
+  // Aktivációs UI létrehozása
+  _createActivationUI() {
     // Ha már létezik, ne hozzunk létre újat
-    if (this.activationContainer || document.getElementById('activation-container')) {
-      console.log("Aktivációs konténer már létezik, nem hozunk létre újat");
-      return;
-    }
+    if (this.activationContainer || document.getElementById('activation-container')) return;
 
     // Konténer létrehozása
     this.activationContainer = document.createElement('div');
     this.activationContainer.id = 'activation-container';
-    
-    // Alapértelmezett HTML tartalom (hibával vagy anélkül)
-    let contentHTML = `
+    // Biztosítjuk, hogy az authService létezzen, mielőtt az eseménykezelőket hozzáadjuk
+    if (!this.authService) {
+       console.error("AuthService nem elérhető a UI létrehozásakor.");
+       // Megjeleníthetsz egy hibaüzenetet a UI-ban
+       this.activationContainer.innerHTML = `<div class="activation-overlay"><div class="activation-card"><p class="activation-message">Hiba: Authentikációs szolgáltatás nem érhető el.</p></div></div>`;
+       document.body.appendChild(this.activationContainer);
+       return; // Ne folytassuk az UI felépítését
+    }
+
+    this.activationContainer.innerHTML = `
       <div class="activation-overlay">
         <div class="activation-card">
           <h2>A Sötét Mágia Útvesztője</h2>
-          ${showServiceError ? 
-            `<p class="activation-error">Hiba: A rendszer nem tudott kapcsolódni a szerverhez. Kérjük, próbáld újra később vagy ellenőrizd az internetkapcsolatot.</p>` 
-            : 
-            `<p>Köszönjük a vásárlást! A folytatáshoz add meg az aktivációs kódodat:</p>`
-          }
+          <p>Köszönjük a vásárlást! A folytatáshoz add meg az aktivációs kódodat:</p>
           <div class="activation-form">
-            <input type="text" id="activation-code" placeholder="XXXX-XXXX-XXXX" autocomplete="off">
+            <input type="text" id="activation-code" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off">
             <button id="activate-btn">Aktiválás</button>
           </div>
           <p id="activation-message" class="activation-message"></p>
-          <p class="activation-info"><small>Egy aktivációs kóddal a könyv akár <strong>3 különböző</strong> eszközön is használható.</small></p>
-          <div id="debug-info" class="debug-info" style="display: none;"></div>
+          <p class="activation-info">Egy aktivációs kóddal a könyv akár <strong>3 különböző</strong> eszközön is használható.</p>
         </div>
       </div>
     `;
 
-    this.activationContainer.innerHTML = contentHTML;
-
     // Stílusok hozzáadása (ha még nincsenek az oldalon)
     if (!document.getElementById('activation-styles')) {
         const style = document.createElement('style');
-        style.id = 'activation-styles';
+        style.id = 'activation-styles'; // ID hozzáadása a duplikáció elkerülésére
         style.textContent = `
           .activation-overlay {
             position: fixed;
@@ -159,7 +116,7 @@ class ActivationUI {
             margin-bottom: 1rem;
             text-align: center;
             letter-spacing: 2px;
-            box-sizing: border-box;
+            box-sizing: border-box; /* Hozzáadva a padding miatti méretproblémák elkerülésére */
           }
 
           #activate-btn {
@@ -179,17 +136,18 @@ class ActivationUI {
           }
 
           #activate-btn:disabled {
-            background-color: #5a00b3;
+            background-color: #5a00b3; /* Kicsit sötétebb letiltva */
             cursor: not-allowed;
           }
 
+
           .activation-message {
             min-height: 1.5rem;
-            margin-top: 1rem;
-            font-weight: bold;
+            margin-top: 1rem; /* Hozzáadva egy kis térköz */
+            font-weight: bold; /* Kiemelés */
           }
 
-          .activation-message.error {
+          .activation-message.error { /* Külön osztály a hibához */
              color: #ff5555;
           }
 
@@ -206,113 +164,47 @@ class ActivationUI {
           .activation-info strong {
             color: #9b30ff;
           }
-          
-          .activation-error {
-            color: #ff5555;
-            font-weight: bold;
-            margin-bottom: 1rem;
-          }
-          
-          .debug-info {
-            font-size: 0.8rem;
-            margin-top: 1.5rem;
-            padding: 0.5rem;
-            background-color: #111;
-            border-radius: 4px;
-            text-align: left;
-            color: #888;
-            max-height: 100px;
-            overflow-y: auto;
-          }
-          
-          /* Mobilra optimalizálás */
-          @media (max-width: 480px) {
-            .activation-card {
-              padding: 1.5rem;
-              width: 85%;
-            }
-            
-            #activation-code,
-            #activate-btn {
-              font-size: 16px; /* Nagyobb betűméret mobilon */
-            }
-            
-            #activate-btn {
-              padding: 0.85rem 1.5rem;
-              width: 100%; /* Teljes szélesség mobilon */
-            }
-          }
         `;
         document.head.appendChild(style);
     }
 
     // Hozzáadjuk az oldalhoz
     document.body.appendChild(this.activationContainer);
-    console.log("Aktivációs UI létrehozva és beillesztve a DOM-ba");
 
     // Eseménykezelők hozzáadása
+    // Biztosítjuk, hogy az elemek létezzenek, mielőtt eseménykezelőt adunk hozzájuk
     const activateButton = document.getElementById('activate-btn');
     const codeInput = document.getElementById('activation-code');
 
-    // Debug gomb - 3x kattintásra megjelenik a debug info
-    const header = this.activationContainer.querySelector('h2');
-    if (header) {
-      let clickCount = 0;
-      let clickTimer = null;
-      
-      header.addEventListener('click', () => {
-        clickCount++;
-        
-        // Reset after 2 seconds
-        clearTimeout(clickTimer);
-        clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
-        
-        // Show debug after 3 clicks
-        if (clickCount >= 3) {
-          const debugInfo = document.getElementById('debug-info');
-          if (debugInfo) {
-            debugInfo.style.display = 'block';
-            debugInfo.innerHTML = `
-              Firebase inicializálva: ${!!(window.firebaseApp)}<br>
-              Auth szolgáltatás: ${!!(window.authService)}<br>
-              Auth User ID: ${window.authService?.auth?.currentUser?.uid || 'nincs'}<br>
-              Mobilos böngésző: ${/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)}<br>
-              Böngésző User Agent: ${navigator.userAgent}
-            `;
-          }
-          clickCount = 0;
-        }
-      });
-    }
-
-    // Gomb eseménykezelő
     if (activateButton) {
         activateButton.addEventListener('click', () => this._handleActivation());
     } else {
         console.error("Aktivációs gomb (activate-btn) nem található!");
     }
 
-    // Input mező eseménykezelő
     if (codeInput) {
         codeInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') this._handleActivation();
         });
+        
+        // FONTOS JAVÍTÁS: Eltávolítottuk a kód formázást, hogy bármilyen formátumban beírható legyen
+        // NE FORMÁZZON SEMMIT, csak engedje meg a beírást és NAGYBETŰSÍTSE
+        codeInput.addEventListener('input', (e) => {
+          // Csak nagybetűsítünk, egyéb formázás nélkül
+          let value = e.target.value.toUpperCase();
+          
+          // Ha különbözik az eredeti értéktől, csak akkor frissítjük
+          if (value !== e.target.value) {
+            e.target.value = value;
+          }
+        });
     } else {
         console.error("Aktivációs kód beviteli mező (activation-code) nem található!");
     }
-    
-    // Ha szeretnénk, hogy minden mobilon működjön, állítsuk fókuszba az inputot
-    if (codeInput && /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      setTimeout(() => {
-        codeInput.focus();
-      }, 500);
-    }
   }
 
-  // Aktivációs üzenet megjelenítése - kibővített hibakezeléssel
-  _showMessage(message, type = 'info') {
-    console.log(`Üzenet megjelenítése: ${message}, típus: ${type}`);
-    
+  // Aktivációs üzenet megjelenítése
+   _showMessage(message, type = 'info') { // type lehet 'info', 'success', 'error'
     const messageElement = document.getElementById('activation-message');
     if (!messageElement) {
         console.error("Üzenet elem (activation-message) nem található!");
@@ -327,161 +219,136 @@ class ActivationUI {
     } else if (type === 'error') {
         messageElement.classList.add('error');
     }
-    
-    // Debug információkat is frissítjük, ha látható
-    const debugInfo = document.getElementById('debug-info');
-    if (debugInfo && debugInfo.style.display === 'block') {
-      debugInfo.innerHTML += `<br>Üzenet: ${message} (${type})`;
-    }
   }
 
-  // Aktivációs kódkezelés - MOBIL-KOMPATIBILIS VERZIÓ
+  // Aktivációs kódkezelés - MÓDOSÍTOTT VERZIÓ
   async _handleActivation() {
-    console.log("_handleActivation elindult");
-    
-    // Aktivációs kód beszerzése
     const codeInput = document.getElementById('activation-code');
+    // Biztosítjuk, hogy az authService létezzen
+    if (!this.authService) {
+        console.error("AuthService nem elérhető a _handleActivation hívásakor.");
+        this._showMessage('Hiba: Authentikációs szolgáltatás nem elérhető.', 'error');
+        return;
+    }
+
+    // Ellenőrizzük, hogy a codeInput létezik-e
     if (!codeInput) {
-        console.error("Aktivációs kód beviteli mező nem található");
+        console.error("Aktivációs kód beviteli mező nem található a _handleActivationben.");
+        this._showMessage('Hiba: Nem található a kód beviteli mező.', 'error');
         return;
     }
     
-    const code = codeInput.value.trim().toUpperCase();
-    console.log(`Megadott kód: ${code}`);
+    // FONTOS JAVÍTÁS: Bármilyen formátumot elfogadunk, csak a whitespace-t és kötőjeleket távolítjuk el
+    let code = codeInput.value.trim().toUpperCase();
+    
+    // Eltávolítjuk a whitespace-t és kötőjeleket az ellenőrzéshez
+    code = code.replace(/[\s-]/g, '');
+    
+    // Visszaformázzuk a standard formátumra, ha kell
+    if (code.length === 16) {
+        // Visszaformázás: XXXX-XXXX-XXXX-XXXX
+        code = code.replace(/(.{4})/g, '$1-').slice(0, -1);
+    } else if (code.length === 12) {
+        // Visszaformázás: XXXX-XXXX-XXXX
+        code = code.slice(0, 4) + '-' + code.slice(4, 8) + '-' + code.slice(8, 12);
+    }
 
-    // Kód ellenőrzése
     if (!code) {
       this._showMessage('Kérlek add meg az aktivációs kódot', 'error');
       return;
     }
 
-    // Authservice ellenőrzése
-    if (!this.authService) {
-      // Ha a constructor-ban nem találta meg, próbáljuk meg újra
-      if (window.authService) {
-        console.log("AuthService most már elérhető, használat...");
-        this.authService = window.authService;
-      } else {
-        console.error("AuthService nem elérhető a kód ellenőrzésekor");
-        this._showMessage('Hiba: Authentikációs szolgáltatás nem elérhető. Kérjük, frissítsd az oldalt!', 'error');
-        return;
-      }
-    }
-
     // Gomb letiltása az ellenőrzés idejére
     const activateBtn = document.getElementById('activate-btn');
-    if (activateBtn) {
+     if (!activateBtn) {
+        console.error("Aktivációs gomb nem található a _handleActivationben.");
+        // A folyamat mehet tovább, de a gombot nem tudjuk kezelni
+    } else {
         activateBtn.disabled = true;
         activateBtn.textContent = 'Ellenőrzés...';
     }
-    
-    this._showMessage('Kód ellenőrzése...', 'info');
+    this._showMessage(''); // Korábbi üzenet törlése
 
     try {
-      // FONTOS: Ellenőrizzük, hogy Firebase megfelelően inicializálódott-e
-      if (!window.firebaseApp || !window.firebaseApp.auth) {
-        throw new Error("Firebase szolgáltatások nem elérhetők.");
-      }
-
       // === Bejelentkezés biztosítása ===
       let currentUser = this.authService.auth.currentUser;
-      
       // Ha nincs bejelentkezett felhasználó, próbáljunk meg bejelentkezni
       if (!currentUser) {
         console.log('Nincs aktív felhasználó, névtelen bejelentkezés megkísérlése...');
         try {
-          // Tisztább hibakezeléssel
-          const signInResult = await this.authService.signInAnonymously();
-          currentUser = signInResult.user;
-          
+          await this.authService.signInAnonymously();
+          currentUser = this.authService.auth.currentUser; // Frissítjük a currentUser változót
           if (!currentUser) {
-            throw new Error('Bejelentkezés sikeres volt, de felhasználó nem érkezett vissza');
+            // Ha a bejelentkezés után sincs felhasználó, az komoly hiba
+            throw new Error('Névtelen bejelentkezés sikertelen.');
           }
-          
           console.log('Névtelen bejelentkezés sikeres:', currentUser.uid);
         } catch (signInError) {
           console.error('Névtelen bejelentkezési hiba:', signInError);
-          this._showMessage(`Hiba a bejelentkezés során: ${signInError.message || 'Ismeretlen hiba'}`, 'error');
-          
-          if(activateBtn) {
+          this._showMessage('Hiba történt a bejelentkezés során.', 'error');
+          if(activateBtn) { // Csak akkor állítjuk vissza, ha létezik
              activateBtn.disabled = false;
              activateBtn.textContent = 'Aktiválás';
           }
-          return;
+          return; // Megszakítjuk a folyamatot, ha a bejelentkezés nem sikerül
         }
       } else {
          console.log('Aktív felhasználó már van:', currentUser.uid);
       }
+      // === Bejelentkezés biztosítása VÉGE ===
 
       // Most már van bejelentkezett felhasználó (currentUser), jöhet a kód ellenőrzése
-      console.log('Kód ellenőrzése folyamatban...');
-      
-      try {
-        const verification = await this.authService.verifyActivationCode(code);
-        console.log('Kód ellenőrzés eredménye:', verification);
+      this._showMessage('Kód ellenőrzése...', 'info'); // Tájékoztató üzenet
+      const verification = await this.authService.verifyActivationCode(code);
 
-        if (!verification.valid) {
-          this._showMessage(verification.message || 'Érvénytelen aktivációs kód', 'error');
-          if(activateBtn) {
-              activateBtn.disabled = false;
-              activateBtn.textContent = 'Aktiválás';
+      if (!verification.valid) {
+        this._showMessage(verification.message || 'Érvénytelen aktivációs kód', 'error');
+         if(activateBtn) {
+             activateBtn.disabled = false;
+             activateBtn.textContent = 'Aktiválás';
           }
-          return;
-        }
-
-        // Ha a kód érvényes, de az eszköz már aktiválva van
-        if (verification.alreadyActivated) {
-          this._showMessage('Eszköz sikeresen azonosítva!', 'success');
-          await this.authService.storeCredentials(currentUser);
-        } else {
-          // Új aktiválás (első eszköz vagy új eszköz hozzáadása)
-          this._showMessage('Sikeres aktiváció! Eszköz regisztrálva...', 'success');
-          
-          try {
-            // FONTOS: Ez a lépés mobilon gyakran hibákat okoz, ezért külön try/catch blokkban van
-            await this.authService.markCodeAsActive(code, currentUser.uid);
-            
-            // Hitelesítés mentése
-            await this.authService.storeCredentials(currentUser);
-          } catch (markActiveError) {
-            console.error('Hiba a kód aktiválásakor:', markActiveError);
-            this._showMessage(`Hiba a kód aktiválásakor: ${markActiveError.message || 'Adatbázis hiba'}`, 'error');
-            
-            if(activateBtn) {
-              activateBtn.disabled = false;
-              activateBtn.textContent = 'Aktiválás';
-            }
-            return;
-          }
-        }
-
-        // UI frissítése és átirányítás/könyvmegjelenítés
-        this.isActivated = true;
-
-        // Jelezzük a sikert az inicializáló kódnak
-        const activationSuccessEvent = new Event('activationSuccess');
-        document.dispatchEvent(activationSuccessEvent);
-        console.log("'activationSuccess' esemény elküldve");
-
-        // Kis szünet a sikeres üzenet megjelenítéséhez
-        setTimeout(() => {
-          this.remove();
-          console.log("Aktivációs felület eltávolítva");
-        }, 1500);
-
-      } catch (verifyError) {
-        console.error('Hiba a kód ellenőrzésekor:', verifyError);
-        this._showMessage(`Hiba a kód ellenőrzésekor: ${verifyError.message || 'Adatbázis hiba'}`, 'error');
-        
-        if(activateBtn) {
-          activateBtn.disabled = false;
-          activateBtn.textContent = 'Aktiválás';
-        }
+        return;
       }
 
+      // Ha a kód érvényes, de az eszköz már aktiválva van
+      if (verification.alreadyActivated) {
+        this._showMessage('Eszköz sikeresen azonosítva!', 'success');
+        // A currentUser biztosan létezik ekkorra
+        // Frissítsük a hitelesítési adatokat a local storage-ban (redundáns lehet, de biztosít)
+        await this.authService.storeCredentials(currentUser);
+
+      } else {
+        // Új aktiválás (első eszköz vagy új eszköz hozzáadása)
+        this._showMessage('Sikeres aktiváció! Eszköz hozzáadása...', 'success');
+        // A currentUser biztosan létezik ekkorra
+        // Kód megjelölése aktívként és eszköz hozzáadása
+        await this.authService.markCodeAsActive(code, currentUser.uid);
+        // Hitelesítés mentése
+        await this.authService.storeCredentials(currentUser);
+      }
+
+      // UI frissítése és átirányítás/könyvmegjelenítés
+      this.isActivated = true;
+
+      // Jelezzük a sikert az inicializáló kódnak (pl. az index.html-ben)
+      // Létrehozunk egy egyedi eseményt
+       const activationSuccessEvent = new Event('activationSuccess');
+       document.dispatchEvent(activationSuccessEvent);
+
+
+      // Kis szünet a sikeres üzenet megjelenítéséhez, majd UI eltüntetése
+      setTimeout(() => {
+        this.remove(); // UI eltávolítása a remove() függvénnyel
+         console.log("Aktivációs felület eltávolítva.");
+         // Az alkalmazás indítását most már az index.html-ben lévő
+         // 'activationSuccess' eseményre figyelő kódnak kellene kezelnie.
+      }, 1500); // Késleltetés a sikeres üzenet olvashatóságáért
+
     } catch (error) {
-      console.error('Aktiválási hiba:', error);
-      this._showMessage(`Hiba történt: ${error.message || 'Ismeretlen hiba'}`, 'error');
+      console.error('Aktiválási hiba a _handleActivationben:', error);
+      // Általános hibaüzenet, ha valami váratlan történik
+      // (pl. a bejelentkezés vagy a Firestore művelet dob kivételt)
+      this._showMessage('Hiba történt az aktiválás során.', 'error');
 
       if (activateBtn) {
         activateBtn.disabled = false;
@@ -494,20 +361,39 @@ class ActivationUI {
   remove() {
     if (this.activationContainer) {
       this.activationContainer.remove();
-      this.activationContainer = null;
-      console.log("Aktivációs konténer eltávolítva");
+      this.activationContainer = null; // Töröljük a referenciát is
+      console.log("Aktivációs konténer eltávolítva.");
     }
-    
-    // Megjegyzés: A stílusokat általában nem távolítjuk el,
-    // mert más komponensek még használhatják
+     // Esetleg a stílusokat is eltávolíthatnánk, ha már nincs rájuk szükség
+     const activationStyles = document.getElementById('activation-styles');
+     if (activationStyles) {
+        // activationStyles.remove(); // Óvatosan, ha más is használhatja ezeket a stílusokat
+     }
   }
 }
 
-// A biztonság kedvéért dinamikusan adjuk hozzá a window-hoz,
-// de elkerüljük a duplikációt
-if (!window.activationUI) {
-  console.log("ActivationUI példány létrehozása");
-  window.activationUI = new ActivationUI();
-} else {
-  console.log("ActivationUI példány már létezik");
-}
+// Exportáljuk az osztályt, de csak miután a DOM betöltődött,
+// és biztosítjuk, hogy az authService már létezik.
+// Ezt inkább az index.html-ben lévő fő inicializáló szkriptnek kellene kezelnie.
+// Közvetlenül itt létrehozni a window objektumon rizikós lehet a betöltési sorrend miatt.
+// Javaslat: Az index.html-ben a DOMContentLoaded után példányosítsd:
+// document.addEventListener('DOMContentLoaded', async () => {
+//    window.authService = new AuthService(); // Feltéve, hogy az AuthService definíciója már betöltődött
+//    window.activationUI = new ActivationUI();
+//    // ... többi inicializáló kód ...
+// });
+
+// A biztonság kedvéért itt hagyjuk, de az index.html-es megoldás robusztusabb:
+ if (window.authService) {
+     window.activationUI = new ActivationUI();
+ } else {
+     // Ha az authService még nem jött létre, várjunk egy kicsit, vagy jelezzük a problémát
+     console.warn("AuthService még nem volt elérhető, amikor az activationUI példányosult volna.");
+     // Esetleg próbálkozhatunk később:
+     // setTimeout(() => {
+     //    if (window.authService && !window.activationUI) {
+     //        window.activationUI = new ActivationUI();
+     //        console.log("ActivationUI késleltetve példányosítva.");
+     //    }
+     // }, 500);
+ }
