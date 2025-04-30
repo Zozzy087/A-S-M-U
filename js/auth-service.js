@@ -398,7 +398,7 @@ class AuthService {
     }
   }
   
-  // A kódot megjelöli aktívként és hozzáadja az eszközt - mobilra optimalizált
+  // A kódot megjelöli aktívként és hozzáadja az eszközt - JAVÍTOTT VERZIÓ!
   async markCodeAsActive(code, userId) {
     try {
       console.log("markCodeAsActive() elindult");
@@ -456,12 +456,16 @@ class AuthService {
           throw new Error(`A kód már elérte a maximum használható eszközök számát (${maxDevices})`);
         }
         
-        // Új eszköz hozzáadása
+        // *** JAVÍTOTT RÉSZ - NE HASZNÁLJUNK FIELDVALUE-T ***
+        // Helyette egyszerű dátum objektumot használunk
+        const currentTimestamp = new Date();
+        
+        // Új eszköz hozzáadása - módosított verzió FieldValue nélkül
         const updatedDevices = [
           ...currentDevices,
           {
             deviceId: userId,
-            activatedAt: this.db.firestore.FieldValue.serverTimestamp(),
+            activatedAt: currentTimestamp,  // Egyszerű dátum objektum a FieldValue helyett
             // Eszköz típus információk tárolása
             deviceType: /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
             userAgent: navigator.userAgent.substring(0, 100) // Limitált hosszúság
@@ -472,65 +476,18 @@ class AuthService {
         
         // Kód státuszának és eszközlistájának frissítése
         try {
-          // Transaction használata a konkurenciakezeléshez
-          await this.db.runTransaction(async (transaction) => {
-            // Újra lekérjük a dokumentumot a tranzakción belül
-            const codeSnapshot = await transaction.get(codeRef);
-            
-            if (!codeSnapshot.exists) {
-              throw new Error('A kód nem létezik a tranzakció során');
-            }
-            
-            // Aktuális adatok a tranzakción belül
-            const latestData = codeSnapshot.data();
-            const latestDevices = latestData.devices || [];
-            
-            // Újra ellenőrizzük, hogy az eszköz már szerepel-e
-            const deviceExistsInTransaction = latestDevices.some(device => device.deviceId === userId);
-            
-            if (deviceExistsInTransaction) {
-              console.log('Az eszköz már szerepel (tranzakción belüli ellenőrzés)');
-              return; // Kilépünk a tranzakcióból változtatás nélkül
-            }
-            
-            // Ellenőrizzük a max eszközök számát újra
-            if (latestDevices.length >= maxDevices) {
-              throw new Error(`A kód már elérte a maximum eszközszámot (${maxDevices}) a tranzakción belül`);
-            }
-            
-            // Új eszköz hozzáadása a legfrissebb állapothoz
-            const updatedDevicesInTransaction = [
-              ...latestDevices,
-              {
-                deviceId: userId,
-                activatedAt: this.db.firestore.FieldValue.serverTimestamp(),
-                deviceType: /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-                userAgent: navigator.userAgent.substring(0, 100)
-              }
-            ];
-            
-            // Frissítjük az adatbázist
-            transaction.update(codeRef, {
-              status: 'active',  // "unused" → "active"
-              devices: updatedDevicesInTransaction,
-              lastUpdated: this.db.firestore.FieldValue.serverTimestamp()
-            });
-          });
-          
-          console.log('Kód sikeresen aktiválva tranzakcióval, eszköz hozzáadva');
-          return true;
-        } catch (transactionError) {
-          console.error('Tranzakciós hiba:', transactionError);
-          
-          // Hiba esetén egyszerű update-tel próbálkozunk
+          // Egyszerű update a tranzakció helyett
           await codeRef.update({
             status: 'active',  // "unused" → "active"
             devices: updatedDevices,
-            lastUpdated: this.db.firestore.FieldValue.serverTimestamp()
+            lastUpdated: currentTimestamp  // Ezt is dátum objektumként küldjük
           });
           
-          console.log('Kód sikeresen aktiválva egyszerű update-tel, eszköz hozzáadva');
+          console.log('Kód sikeresen aktiválva, eszköz hozzáadva');
           return true;
+        } catch (updateError) {
+          console.error('Update hiba:', updateError);
+          throw new Error(`Adatbázis update hiba: ${updateError.message || 'Ismeretlen'}`);
         }
       } catch (dbError) {
         console.error('Adatbázis hiba a kód aktiválásakor:', dbError);

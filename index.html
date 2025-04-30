@@ -20,7 +20,7 @@
   <meta name="description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
   <meta name="keywords" content="kalandkönyv, interaktív könyv, fantasy, sötét mágia">
   <link rel="icon" href="files/icon-512.png" type="image/png">
-  <link rel="apple-touch-icon" href="files/icon-512.png">
+  <link rel="apple-touch-icon" href="files/icon-192.png">
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
@@ -28,7 +28,7 @@
   <meta property="og:description" content="Dark fantasy kalandkönyv, ahol a főhős te vagy!">
   <meta property="og:image" content="./files/icon-512.png">
   
-  <!-- Google Font - előre betöltjük -->
+  <!-- Google Font - Előre betöltve a kritikus fontokat -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
@@ -41,8 +41,9 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #101010;
+      background-color: #121212; /* Sötétebb alap háttér */
       font-family: 'Cinzel', serif;
+      -webkit-tap-highlight-color: transparent; /* Mobil tap highlight eltávolítása */
     }
     
     #book-container {
@@ -68,6 +69,14 @@
       transition: opacity 0.5s ease;
     }
     
+    #loading-message {
+      color: #7f00ff;
+      font-family: 'Cinzel', serif;
+      text-align: center;
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    
     .loader {
       width: 50px;
       height: 50px;
@@ -75,21 +84,13 @@
       border-radius: 50%;
       border-top-color: transparent;
       animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    
-    .loader-text {
-      color: #7f00ff;
-      font-family: 'Cinzel', serif;
-      font-size: 18px;
-      text-align: center;
     }
     
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-	
-	/* Telepítési banner */
+    
+    /* Telepítési banner */
     #install-banner {
       display: none;
       position: fixed;
@@ -125,6 +126,11 @@
         font-size: 1.125rem;
         padding: 1rem;
       }
+      
+      #loading-message {
+        width: 80%;
+        font-size: 16px;
+      }
     }
 
     /* Nagy monitorokon kicsit kisebb: ne foglaljon túl sok helyet */
@@ -133,64 +139,71 @@
         font-size: 0.9rem;
       }
     }
-    
-    /* Hibaüzenet stílus */
-    #error-message {
+	
+    /* Hibaüzenet konténer a fő hibaállapothoz */
+    #error-container {
       display: none;
-      background-color: rgba(0, 0, 0, 0.85);
-      color: #ff5555;
       position: fixed;
-      bottom: 0;
+      top: 0;
       left: 0;
       width: 100%;
-      padding: 15px;
-      text-align: center;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
       z-index: 10001;
-      font-family: 'Roboto', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #fff;
+      font-family: 'Cinzel', serif;
     }
     
-    .retry-button {
+    #error-container h2 {
+      color: #ff5555;
+      margin-bottom: 1rem;
+    }
+    
+    #error-container p {
+      margin: 0.5rem 0;
+      max-width: 80%;
+    }
+    
+    #error-container button {
       background-color: #7f00ff;
-      color: white;
+      color: #fff;
       border: none;
-      padding: 8px 15px;
-      margin-top: 10px;
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
       border-radius: 4px;
       cursor: pointer;
       font-family: 'Cinzel', serif;
+      margin-top: 2rem;
     }
   </style>
-  
-  <!-- Firebase SDK -->
-  <!-- Minden script betöltése defer attribútummal a jobb teljesítményért -->
-  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  
-  <!-- Firebase modulok -->
-  <script defer src="js/firebase-config.js"></script>
-  <script defer src="js/auth-service.js"></script>
-  <script defer src="js/activation-ui.js"></script>
-  
-  <!-- FlipbookEngine -->
-  <script defer src="flipbook-engine.js"></script>
-
 </head>
 <body>
+  <!-- Hibaállapot konténer -->
+  <div id="error-container" style="display:none;">
+    <h2>Hiba történt</h2>
+    <p>Az alkalmazás betöltése közben probléma lépett fel.</p>
+    <p>Kérjük, ellenőrizd az internetkapcsolatot és próbáld újra.</p>
+    <button id="error-retry-btn" onclick="window.location.reload()">Újrapróbálkozás</button>
+  </div>
 
-  <!-- === TELEPÍTÉS BANNER === -->
+  <!-- Telepítés banner -->
   <div id="install-banner">
     📲 Telepítsd az alkalmazást a főképernyőre!<br>
-    <small>
+    <small style="font-size:0.9em; opacity:0.8;">
       1. Kattints ide<br>
       2. Válaszd: "Hozzáadás a Főképernyőhöz" lehetőséget!
     </small>
   </div>
 
-  <!-- Betöltő képernyő - fejlesztett -->
+  <!-- Betöltő képernyő -->
   <div id="loading-screen">
     <div class="loader"></div>
-    <div class="loader-text">A sötét mágia betöltése...</div>
+    <div id="loading-message">Betöltés...</div>
   </div>
 
   <!-- Könyv konténer -->
@@ -198,233 +211,929 @@
     <!-- A FlipbookEngine ide fogja beilleszteni az iframe-eket -->
   </div>
   
-  <!-- Hibaüzenet konténer -->
-  <div id="error-message">
-    Hiba történt a tartalom betöltése során.
-    <br>
-    <button class="retry-button" onclick="window.location.reload()">Újrapróbálkozás</button>
-  </div>
-  
-  <!-- Hangok -->
-  <audio id="flip-sound" src="sounds/pageturn-102978.mp3" preload="auto"></audio>
+  <!-- Hangok - csak akkor töltődnek be, ha valóban szükségesek -->
+  <audio id="flip-sound" preload="none" src="sounds/pageturn-102978.mp3"></audio>
 
-  <!-- Főinicializáló script - OPTIMALIZÁLT MOBILRA -->
+  <!-- Firebase SDK - inline közvetlenül -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <!-- Firebase konfiguráció - inline -->
   <script>
-    // Mobilos eszközdetektálás
-    const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    
-    // Hibaüzenet megjelenítése
-    function showError(message) {
-      const errorBox = document.getElementById('error-message');
-      if (errorBox) {
-        errorBox.textContent = message;
-        errorBox.style.display = 'block';
-      }
-      
-      // Betöltő képernyő elrejtése
-      const loadingScreen = document.getElementById('loading-screen');
-      if (loadingScreen) {
-        loadingScreen.style.display = 'none';
-      }
-      
-      console.error(message);
-    }
-    
-    // Betöltő szöveg frissítése
-    function updateLoaderText(text) {
-      const loaderText = document.querySelector('.loader-text');
-      if (loaderText) {
-        loaderText.textContent = text;
-      }
-    }
-    
-    // Eseményfigyelő az aktiváció sikeréhez
-    document.addEventListener('activationSuccess', function() {
-      console.log("Aktiváció sikeres esemény elkapva!");
-      updateLoaderText("Aktiváció sikeres, könyv betöltése...");
-      
-      // Rövid várakozás a felhasználói élmény miatt
-      setTimeout(() => {
-        try {
-          // FlipbookEngine inicializálása az aktiváció után
-          const flipbook = new FlipbookEngine({
-            containerId: 'book-container',
-            totalPages: 300,
-            soundPath: 'sounds/pageturn-102978.mp3'
-          });
-          
-          // Betöltő képernyő elrejtése
-          const loadingScreen = document.getElementById('loading-screen');
-          if (loadingScreen) {
-            setTimeout(() => {
-              loadingScreen.style.opacity = '0';
-              setTimeout(() => {
-                loadingScreen.style.display = 'none';
-              }, 500);
-            }, 300);
-          }
-          
-          console.log('Flipbook sikeres inicializálása az aktiváció után!');
-        } catch (err) {
-          showError("Hiba a könyv betöltésekor: " + (err.message || "Ismeretlen hiba"));
-        }
-      }, 800);
-    });
+    // Firebase konfiguráció
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxsN0vk0dAoDu7GYn2Bl8WoKDejy6q1vA",
+      authDomain: "a-s-m-u.firebaseapp.com",
+      projectId: "a-s-m-u",
+      storageBucket: "a-s-m-u.firebasestorage.app",
+      messagingSenderId: "317821756996",
+      appId: "1:317821756996:web:61d1b94b291080592abe11",
+      measurementId: "G-ENT3XNTKTE"
+    };
 
-    // Betöltési sorrend kezelése
-    document.addEventListener('DOMContentLoaded', async () => {
-      console.log("DOMContentLoaded - Betöltés indítása");
-      updateLoaderText("Komponensek inicializálása...");
+    // Betöltési állapot és hibakövetés
+    const loadingStates = {
+      start: "Betöltés...",
+      firebase: "Firebase inicializálása...",
+      auth: "Hitelesítés ellenőrzése...",
+      activation: "Aktiváció ellenőrzése...",
+      book: "Könyv betöltése...",
+      complete: "Kész!"
+    };
+    
+    function updateLoadingMessage(state) {
+      const loadingMessage = document.getElementById('loading-message');
+      if (loadingMessage) {
+        loadingMessage.textContent = loadingStates[state] || state;
+      }
+    }
+    
+    function showErrorScreen(message) {
+      const errorContainer = document.getElementById('error-container');
+      const errorParagraphs = errorContainer.querySelectorAll('p');
       
-      // Globális hibakezelés
-      window.onerror = function(message, source, lineno, colno, error) {
-        console.error("Globális hiba: ", message, "Forrás: ", source, "Sor: ", lineno);
-        updateLoaderText("Hiba történt a betöltés során");
-        setTimeout(() => {
-          showError("Hibát észleltünk: " + message);
-        }, 1000);
-        return true; // Megelőzzük a böngésző saját hibaüzenetét
+      if (errorParagraphs.length > 0 && message) {
+        errorParagraphs[0].textContent = message;
+      }
+      
+      document.getElementById('loading-screen').style.display = 'none';
+      errorContainer.style.display = 'flex';
+    }
+    
+    // Alapvető hiba elkapása
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('Globális hiba:', message, error);
+      showErrorScreen('Váratlan hiba történt: ' + message);
+      return true; // Megakadályozza a böngésző alapértelmezett hibajelzését
+    };
+    
+    try {
+      updateLoadingMessage('firebase');
+      
+      // Firebase inicializálása
+      firebase.initializeApp(firebaseConfig);
+
+      // Firebase szolgáltatások
+      window.firebaseApp = {
+        auth: firebase.auth(),
+        db: firebase.firestore()
       };
-
-      // Firebase komponensek betöltésének ellenőrzése
-      let firebaseLoaded = false;
-      let maxAttempts = 10;
-      let attempt = 0;
       
-      async function checkFirebase() {
-        if (typeof firebase !== 'undefined' && firebase.app) {
-          console.log("Firebase SDK sikeresen betöltve");
-          firebaseLoaded = true;
-          return true;
+      console.log("Firebase sikeresen inicializálva");
+    } catch (error) {
+      console.error("Firebase inicializálási hiba:", error);
+      showErrorScreen("Nem sikerült inicializálni a Firebase-t: " + error.message);
+    }
+  </script>
+
+  <!-- AuthService és ActivationUI létrehozása -->
+  <script>
+    // AuthService - A kalandkönyv autentikációs szolgáltatása
+    class AuthService {
+      constructor() {
+        // Ellenőrizzük, hogy a Firebase sikeresen inicializálódott-e
+        if (!window.firebaseApp || !window.firebaseApp.auth || !window.firebaseApp.db) {
+          console.error('Firebase nem inicializálódott megfelelően');
+          // Alapértelmezett értékek, hogy ne kapjunk hibát később
+          this.auth = null; 
+          this.db = null;
+        } else {
+          this.auth = window.firebaseApp.auth;
+          this.db = window.firebaseApp.db;
         }
         
-        if (attempt >= maxAttempts) {
-          console.error("Firebase SDK betöltése sikertelen több próbálkozás után");
-          updateLoaderText("Nem sikerült kapcsolódni a szerverhez");
+        this.STORAGE_KEY = 'kalandkonyv_auth';
+        this.CODES_COLLECTION = 'activationCodes';
+        
+        // Autentikáció változásának figyelése (csak ha sikeresen inicializálódott)
+        if (this.auth) {
+          this.auth.onAuthStateChanged(user => {
+            if (user) {
+              console.log('Felhasználó bejelentkezve:', user.uid);
+            } else {
+              console.log('Nincs bejelentkezett felhasználó');
+            }
+          });
+        }
+      }
+      
+      // Helyi tárolás elérhetőségének ellenőrzése
+      _isStorageAvailable() {
+        try {
+          const testKey = '__storage_test__';
+          localStorage.setItem(testKey, testKey);
+          localStorage.removeItem(testKey);
+          return true;
+        } catch (e) {
+          console.warn('localStorage nem érhető el:', e);
           return false;
         }
-        
-        attempt++;
-        console.log(`Firebase SDK még nem elérhető. Újrapróbálkozás (${attempt}/${maxAttempts})...`);
-        
-        return new Promise(resolve => {
-          setTimeout(async () => {
-            resolve(await checkFirebase());
-          }, 500); // 500ms várakozás próbálkozások között
-        });
       }
       
-      // Firebase SDK betöltésének ellenőrzése
-      updateLoaderText("Kapcsolódás a szerverhez...");
-      firebaseLoaded = await checkFirebase();
-      
-      if (!firebaseLoaded) {
-        showError("Nem sikerült kapcsolódni a szerverhez. Kérjük, ellenőrizd az internetkapcsolatot!");
-        return;
+      // Adatok biztonságos mentése localStorage-ba
+      _saveToStorage(key, data) {
+        if (!this._isStorageAvailable()) return false;
+        
+        try {
+          localStorage.setItem(key, JSON.stringify(data));
+          return true;
+        } catch (error) {
+          console.error('Hiba a localStorage írása közben:', error);
+          return false;
+        }
       }
       
-      try {
-        // Firebase konfiguráció inicializálása
-        updateLoaderText("Szerver inicializálása...");
+      // Adatok biztonságos olvasása localStorage-ból
+      _loadFromStorage(key) {
+        if (!this._isStorageAvailable()) return null;
         
-        // Ellenőrizzük, hogy léteznek-e a Firebase komponensek
-        if (!window.firebaseApp) {
-          console.warn("Firebase konfiguráció nincs betöltve, betöltés a firebase-config.js-ből");
-          
-          // Kézi inicializálás
-          const firebaseConfig = {
-            apiKey: "AIzaSyDxsN0vk0dAoDu7GYn2Bl8WoKDejy6q1vA",
-            authDomain: "a-s-m-u.firebaseapp.com",
-            projectId: "a-s-m-u",
-            storageBucket: "a-s-m-u.firebasestorage.app",
-            messagingSenderId: "317821756996",
-            appId: "1:317821756996:web:61d1b94b291080592abe11",
-            measurementId: "G-ENT3XNTKTE"
-          };
-          
-          // Inicializálás
-          firebase.initializeApp(firebaseConfig);
-          
-          // Szolgáltatások
-          window.firebaseApp = {
-            auth: firebase.auth(),
-            db: firebase.firestore()
-          };
-          
-          console.log("Firebase manuálisan inicializálva");
-        } else {
-          console.log("Firebase konfiguráció már be van töltve");
+        try {
+          const item = localStorage.getItem(key);
+          return item ? JSON.parse(item) : null;
+        } catch (error) {
+          console.error('Hiba a localStorage olvasása közben:', error);
+          return null;
         }
+      }
+      
+      // Adat törlése a localStorage-ból
+      _removeFromStorage(key) {
+        if (!this._isStorageAvailable()) return;
         
-        // AuthService és ActivationUI inicializálása
-        updateLoaderText("Hitelesítési szolgáltatás indítása...");
-        
-        // Ellenőrizzük, hogy létezik-e az authService
-        if (!window.authService) {
-          console.warn("authService nem érhető el, létrehozás...");
-          window.authService = new AuthService();
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          console.error('Hiba a localStorage törlése közben:', error);
         }
-        
-        // Ellenőrizzük, hogy létezik-e az activationUI
-        if (!window.activationUI) {
-          console.warn("activationUI nem érhető el, létrehozás...");
-          window.activationUI = new ActivationUI();
-        }
-        
-        // Aktiváció ellenőrzése
-        updateLoaderText("Aktiváció ellenőrzése...");
-        const isActivated = await window.activationUI.initialize();
-        
-        // Ha aktiválva van, folytatjuk a normál inicializálást
-        if (isActivated) {
-          console.log("Eszköz már aktiválva van, könyv betöltése");
-          updateLoaderText("Könyv betöltése...");
+      }
+      
+      // Ellenőrzi, van-e tárolt autentikáció
+      async checkStoredAuth() {
+        try {
+          // Ellenőrizzük, hogy a Firebase inicializálódott-e
+          if (!this.auth || !this.db) {
+            console.error('Firebase szolgáltatások nem érhetők el');
+            return null;
+          }
           
+          // Adatok betöltése a localStorage-ból
+          const storedAuth = this._loadFromStorage(this.STORAGE_KEY);
+          if (!storedAuth) {
+            console.log('Nincs tárolt autentikáció');
+            return null;
+          }
+          
+          console.log('Tárolt autentikáció betöltve:', storedAuth.userId);
+          
+          // Ellenőrizzük, hogy a tárolt token érvényes-e még
+          if (this.auth.currentUser) {
+            console.log('Már van bejelentkezett felhasználó:', this.auth.currentUser.uid);
+            if (this.auth.currentUser.uid === storedAuth.userId) {
+              console.log('A bejelentkezett felhasználó egyezik a tárolttal');
+              return this.auth.currentUser;
+            }
+            console.log('A bejelentkezett felhasználó különbözik a tároltól, kijelentkezés...');
+            await this.auth.signOut(); // Kiléptetjük, mert nem egyezik
+          }
+          
+          // Próbáljunk meg újra bejelentkezni
+          console.log('Megpróbálunk bejelentkezni a tárolt adatokkal...');
           try {
-            // FlipbookEngine inicializálása
-            const flipbook = new FlipbookEngine({
-              containerId: 'book-container',
-              totalPages: 300,
-              soundPath: 'sounds/pageturn-102978.mp3'
-            });
+            await this.auth.signInAnonymously();
+            console.log('Névtelen bejelentkezés sikeres:', this.auth.currentUser?.uid);
             
-            // Betöltő képernyő elrejtése
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-              setTimeout(() => {
-                loadingScreen.style.opacity = '0';
-                setTimeout(() => {
-                  loadingScreen.style.display = 'none';
-                }, 500);
-              }, 800);
+            // Ellenőrizzük, hogy a kapott UID egyezik-e a tároltal
+            if (this.auth.currentUser && this.auth.currentUser.uid === storedAuth.userId) {
+              console.log('Az új bejelentkezés sikeresen visszaállította az eszközt');
+              return this.auth.currentUser;
+            } else {
+              console.log('Az új bejelentkezés nem egyezik a tárolt adatokkal, törlés...');
+              this._removeFromStorage(this.STORAGE_KEY);
+              return null;
+            }
+          } catch (error) {
+            console.error('Hiba történt a bejelentkezés során:', error);
+            this._removeFromStorage(this.STORAGE_KEY);
+            return null;
+          }
+        } catch (error) {
+          console.error('Hiba a tárolt autentikáció ellenőrzésekor:', error);
+          return null;
+        }
+      }
+      
+      // Aktivációs kód ellenőrzése
+      async verifyActivationCode(code) {
+        try {
+          // Ellenőrizzük, hogy a Firebase inicializálódott-e
+          if (!this.auth || !this.db) {
+            console.error('Firebase szolgáltatások nem érhetők el');
+            return { valid: false, message: 'Hiba: Firebase szolgáltatások nem érhetők el' };
+          }
+          
+          console.log('Kód ellenőrzése:', code);
+          const codeDoc = await this.db.collection(this.CODES_COLLECTION).doc(code).get();
+          
+          if (!codeDoc.exists) {
+            console.log('A kód nem létezik:', code);
+            return { valid: false, message: 'Érvénytelen aktivációs kód' };
+          }
+          
+          const codeData = codeDoc.data();
+          const currentUser = this.auth.currentUser;
+          
+          console.log('Kód adatok:', JSON.stringify(codeData));
+          console.log('Jelenlegi felhasználó:', currentUser?.uid);
+          
+          // 1. Ellenőrzés: A kód állapota
+          if (codeData.status === 'unused') {
+            // Ez egy új, még nem használt kód - azonnal érvényesíthető
+            console.log('Új, nem használt kód');
+            return { valid: true };
+          } 
+          else if (codeData.status === 'active') {
+            // Ez egy már aktív kód, ellenőrizzük az eszközöket
+            console.log('Már aktív kód, eszközök ellenőrzése');
+            
+            // 1.a Ellenőrzés: Van-e devices tömb
+            const devices = codeData.devices || [];
+            
+            // 1.b Ellenőrzés: Ez az eszköz már szerepel-e a listában?
+            const deviceExists = devices.some(device => device.deviceId === currentUser?.uid);
+            if (deviceExists) {
+              // Ez az eszköz már hitelesítve van, engedélyezzük az újbóli használatot
+              console.log('Ez az eszköz már aktiválva van ezen a kódon');
+              return { valid: true, alreadyActivated: true };
             }
             
-            console.log('Minden sikeresen inicializálva');
-          } catch (initError) {
-            console.error("FlipbookEngine inicializálási hiba:", initError);
-            showError("Hiba a könyv betöltésekor: " + (initError.message || "Ismeretlen hiba"));
+            // 1.c Ellenőrzés: Van-e még hely új eszköz számára?
+            const maxDevices = codeData.maxDevices || 3; // Alapértelmezetten 3
+            if (devices.length >= maxDevices) {
+              console.log('A kód elérte a maximum eszközszámot:', devices.length, '>=', maxDevices);
+              return { 
+                valid: false, 
+                message: `Ez a kód már elérte a maximum használható eszközök számát (${maxDevices})` 
+              };
+            }
+            
+            // Ha ideáig eljutottunk, a kód egy új eszközön aktiválható
+            console.log('A kód aktiválható új eszközön');
+            return { valid: true };
+          } 
+          else {
+            // Bármilyen más állapot (pl. "expired", ha később bevezetjük)
+            console.log('A kód nem használható állapotban van:', codeData.status);
+            return { valid: false, message: 'Ez a kód már nem használható' };
           }
-        } else {
-          // Ha nincs aktiválva, elrejtjük a betöltő képernyőt,
-          // hogy látszódjon az aktivációs űrlap
-          console.log("Eszköz még nincs aktiválva, aktivációs űrlap megjelenítése");
-          updateLoaderText("Aktivációs űrlap betöltése...");
+        } catch (error) {
+          console.error('Hiba a kód ellenőrzésekor:', error);
+          return { valid: false, message: 'Hiba történt a kód ellenőrzésekor: ' + error.message };
+        }
+      }
+
+      // Névtelen bejelentkezés
+      async signInAnonymously() {
+        try {
+          // Ellenőrizzük, hogy a Firebase inicializálódott-e
+          if (!this.auth) {
+            console.error('Firebase Auth nem érhető el');
+            throw new Error('Firebase Auth nem érhető el');
+          }
           
+          console.log('Névtelen bejelentkezés kísérlet...');
+          const result = await this.auth.signInAnonymously();
+          console.log('Névtelen bejelentkezés sikeres:', result.user?.uid);
+          return result;
+        } catch (error) {
+          console.error('Névtelen bejelentkezési hiba:', error);
+          throw error;
+        }
+      }
+      
+      // A kódot megjelöli aktívként és hozzáadja az eszközt - JAVÍTOTT!
+      async markCodeAsActive(code, userId) {
+        try {
+          // Ellenőrizzük, hogy a Firebase inicializálódott-e
+          if (!this.db) {
+            console.error('Firebase Firestore nem érhető el');
+            throw new Error('Firebase Firestore nem érhető el');
+          }
+          
+          console.log('Kód aktiválása:', code, 'eszköz:', userId);
+          const codeRef = this.db.collection(this.CODES_COLLECTION).doc(code);
+          const codeDoc = await codeRef.get();
+          
+          if (!codeDoc.exists) {
+            console.error('A kód nem létezik:', code);
+            throw new Error('A kód nem létezik');
+          }
+          
+          const codeData = codeDoc.data();
+          const currentDevices = codeData.devices || [];
+          
+          console.log('Jelenlegi eszközök:', JSON.stringify(currentDevices));
+          
+          const deviceExists = currentDevices.some(device => device.deviceId === userId);
+          
+          // Ha az eszköz már szerepel a listában, nincs szükség frissítésre
+          if (deviceExists) {
+            console.log('Ez az eszköz már szerepel a listában, nincs szükség frissítésre');
+            return true;
+          }
+          
+          // FONTOS JAVÍTÁS: Ne használjuk a FieldValue-t, mert mobilokon hibát okoz
+          // Ehelyett egyszerű új dátum objektumot használunk
+          const timestamp = new Date();
+          
+          // Új eszköz hozzáadása
+          const updatedDevices = [
+            ...currentDevices,
+            {
+              deviceId: userId,
+              activatedAt: timestamp  // Kliens oldali időbélyeg a FieldValue helyett
+            }
+          ];
+          
+          console.log('Frissített eszközlista:', JSON.stringify(updatedDevices));
+          
+          // Kód státuszának és eszközlistájának frissítése
+          await codeRef.update({
+            status: 'active',  // "unused" → "active"
+            devices: updatedDevices
+          });
+          
+          console.log('Kód sikeresen aktiválva, eszköz hozzáadva');
+          return true;
+        } catch (error) {
+          console.error('Hiba a kód aktiválásakor:', error);
+          throw error;
+        }
+      }
+      
+      // Hitelesítési adatok mentése
+      async storeCredentials(user) {
+        try {
+          // Ellenőrizzük, hogy a paraméter érvényes-e
+          if (!user || !user.uid) {
+            console.error('Érvénytelen felhasználó:', user);
+            throw new Error('Érvénytelen felhasználó');
+          }
+          
+          console.log('Hitelesítési adatok mentése:', user.uid);
+          
+          try {
+            const token = await user.getIdToken();
+            
+            const authData = {
+              userId: user.uid,
+              token: token,
+              createdAt: Date.now()
+            };
+            
+            // Biztonságos mentés a localStorage-ba
+            const success = this._saveToStorage(this.STORAGE_KEY, authData);
+            
+            if (success) {
+              console.log('Hitelesítési adatok sikeresen mentve');
+            } else {
+              console.warn('Nem sikerült menteni a hitelesítési adatokat, de folytatjuk');
+            }
+            
+            return authData;
+          } catch (tokenError) {
+            console.error('Hiba a token lekérésekor:', tokenError);
+            
+            // Ha a token lekérés hibával jár, mentsük legalább a userId-t
+            const fallbackData = {
+              userId: user.uid,
+              createdAt: Date.now()
+            };
+            
+            this._saveToStorage(this.STORAGE_KEY, fallbackData);
+            console.log('Egyszerűsített hitelesítési adatok mentve');
+            
+            return fallbackData;
+          }
+        } catch (error) {
+          console.error('Hiba a hitelesítési adatok mentésekor:', error);
+          throw error;
+        }
+      }
+      
+      // Kijelentkezés
+      async signOut() {
+        try {
+          // Ellenőrizzük, hogy a Firebase inicializálódott-e
+          if (!this.auth) {
+            console.error('Firebase Auth nem érhető el');
+            return false;
+          }
+          
+          console.log('Kijelentkezés...');
+          await this.auth.signOut();
+          this._removeFromStorage(this.STORAGE_KEY);
+          console.log('Kijelentkezés és adattörlés sikeres');
+          return true;
+        } catch (error) {
+          console.error('Hiba a kijelentkezés során:', error);
+          return false;
+        }
+      }
+    }
+
+    // Aktivációs UI kezelő
+    class ActivationUI {
+      constructor() {
+        // Fontos: Biztosítsd, hogy a window.authService létezzen, mielőtt ez lefut
+        if (!window.authService) {
+           console.error("AuthService még nem inicializálódott, amikor az ActivationUI létrejött!");
+        }
+        this.authService = window.authService;
+        this.isActivated = false;
+        this.activationContainer = null;
+      }
+
+      // Aktivációs UI inicializálása
+      async initialize() {
+        // Ellenőrizzük, hogy az authService elérhető-e
+        if (!this.authService) {
+            console.error("AuthService nem elérhető az initialize hívásakor.");
+            return false; // Jelezzük, hogy nem sikerült az inicializálás
+        }
+
+        // Ellenőrizzük, hogy már hitelesítve van-e
+        const user = await this.authService.checkStoredAuth();
+
+        if (user) {
+          console.log('Felhasználó már aktiválva van:', user.uid);
+          this.isActivated = true;
+          this.remove(); // Ha már aktiválva van, távolítsuk el a UI-t, ha esetleg látható maradt
+          return true;
+        }
+
+        // Aktivációs UI létrehozása és megjelenítése, ha még nincs aktiválva
+        this._createActivationUI();
+        return false;
+      }
+
+      // Aktivációs UI létrehozása
+      _createActivationUI() {
+        // Ha már létezik, ne hozzunk létre újat
+        if (this.activationContainer || document.getElementById('activation-container')) return;
+
+        // Konténer létrehozása
+        this.activationContainer = document.createElement('div');
+        this.activationContainer.id = 'activation-container';
+        // Biztosítjuk, hogy az authService létezzen, mielőtt az eseménykezelőket hozzáadjuk
+        if (!this.authService) {
+           console.error("AuthService nem elérhető a UI létrehozásakor.");
+           // Megjeleníthetsz egy hibaüzenetet a UI-ban
+           this.activationContainer.innerHTML = `<div class="activation-overlay"><div class="activation-card"><p class="activation-message">Hiba: Authentikációs szolgáltatás nem érhető el.</p></div></div>`;
+           document.body.appendChild(this.activationContainer);
+           return; // Ne folytassuk az UI felépítését
+        }
+
+        this.activationContainer.innerHTML = `
+          <div class="activation-overlay">
+            <div class="activation-card">
+              <h2>A Sötét Mágia Útvesztője</h2>
+              <p>Köszönjük a vásárlást! A folytatáshoz add meg az aktivációs kódodat:</p>
+              <div class="activation-form">
+                <input type="text" id="activation-code" placeholder="XXXX-XXXX-XXXX" autocomplete="off">
+                <button id="activate-btn">Aktiválás</button>
+              </div>
+              <p id="activation-message" class="activation-message"></p>
+              <p class="activation-info">Egy aktivációs kóddal a könyv akár <strong>3 különböző</strong> eszközön is használható.</p>
+            </div>
+          </div>
+        `;
+
+        // Stílusok hozzáadása (ha még nincsenek az oldalon)
+        if (!document.getElementById('activation-styles')) {
+            const style = document.createElement('style');
+            style.id = 'activation-styles'; // ID hozzáadása a duplikáció elkerülésére
+            style.textContent = `
+              .activation-overlay {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background-color: rgba(0, 0, 0, 0.85);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+              }
+
+              .activation-card {
+                background-color: #1a1a1a;
+                color: #fff;
+                border-radius: 8px;
+                padding: 2rem;
+                box-shadow: 0 0 30px rgba(127, 0, 255, 0.5);
+                max-width: 90%;
+                width: 400px;
+                text-align: center;
+                font-family: 'Cinzel', serif;
+              }
+
+              .activation-card h2 {
+                color: #7f00ff;
+                margin-bottom: 1.5rem;
+              }
+
+              .activation-form {
+                margin: 1.5rem 0;
+              }
+
+              #activation-code {
+                width: 100%;
+                padding: 0.75rem;
+                background-color: #333;
+                border: 1px solid #7f00ff;
+                border-radius: 4px;
+                color: #fff;
+                font-size: 1rem;
+                margin-bottom: 1rem;
+                text-align: center;
+                letter-spacing: 2px;
+                box-sizing: border-box; /* Hozzáadva a padding miatti méretproblémák elkerülésére */
+              }
+
+              #activate-btn {
+                background-color: #7f00ff;
+                color: #fff;
+                border: none;
+                padding: 0.75rem 2rem;
+                font-size: 1rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: 'Cinzel', serif;
+                transition: background-color 0.3s;
+              }
+
+              #activate-btn:hover {
+                background-color: #9b30ff;
+              }
+
+              #activate-btn:disabled {
+                background-color: #5a00b3; /* Kicsit sötétebb letiltva */
+                cursor: not-allowed;
+              }
+
+
+              .activation-message {
+                min-height: 1.5rem;
+                margin-top: 1rem; /* Hozzáadva egy kis térköz */
+                font-weight: bold; /* Kiemelés */
+              }
+
+              .activation-message.error { /* Külön osztály a hibához */
+                 color: #ff5555;
+              }
+
+              .activation-message.success {
+                color: #55ff55;
+              }
+              
+              .activation-info {
+                font-size: 0.9rem;
+                margin-top: 1.5rem;
+                color: #ccc;
+              }
+              
+              .activation-info strong {
+                color: #9b30ff;
+              }
+              
+              /* Mobil optimalizáció */
+              @media (max-width: 480px) {
+                .activation-card {
+                  padding: 1.5rem;
+                  width: 90%;
+                }
+                
+                #activation-code {
+                  font-size: 1rem;
+                  padding: 0.5rem;
+                  letter-spacing: 1px;
+                }
+              }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Hozzáadjuk az oldalhoz
+        document.body.appendChild(this.activationContainer);
+
+        // Eseménykezelők hozzáadása
+        // Biztosítjuk, hogy az elemek létezzenek, mielőtt eseménykezelőt adunk hozzájuk
+        const activateButton = document.getElementById('activate-btn');
+        const codeInput = document.getElementById('activation-code');
+
+        if (activateButton) {
+            activateButton.addEventListener('click', () => this._handleActivation());
+        } else {
+            console.error("Aktivációs gomb (activate-btn) nem található!");
+        }
+
+        if (codeInput) {
+            codeInput.addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') this._handleActivation();
+            });
+            
+            // Mobilon gyakran probléma a nagybetűs input, segítsünk ezen
+            codeInput.addEventListener('input', (e) => {
+              let value = e.target.value;
+              
+              // Eltávolítjuk a nem alfanumerikus karaktereket és nagybetűsítjük
+              value = value.replace(/[^A-Za-z0-9-]/g, '').toUpperCase();
+              
+              // Kódformázás
+              if (value.length > 4 && value.charAt(4) !== '-') {
+                value = value.slice(0, 4) + '-' + value.slice(4);
+              }
+              if (value.length > 9 && value.charAt(9) !== '-') {
+                value = value.slice(0, 9) + '-' + value.slice(9);
+              }
+              
+              // Beállítjuk a formázott értéket
+              if (e.target.value !== value) {
+                e.target.value = value;
+              }
+            });
+        } else {
+            console.error("Aktivációs kód beviteli mező (activation-code) nem található!");
+        }
+      }
+
+      // Aktivációs üzenet megjelenítése
+       _showMessage(message, type = 'info') { // type lehet 'info', 'success', 'error'
+        const messageElement = document.getElementById('activation-message');
+        if (!messageElement) {
+            console.error("Üzenet elem (activation-message) nem található!");
+            return;
+        }
+
+        messageElement.textContent = message;
+        // Osztályok beállítása a típus alapján
+        messageElement.className = 'activation-message'; // Alap osztály
+        if (type === 'success') {
+            messageElement.classList.add('success');
+        } else if (type === 'error') {
+            messageElement.classList.add('error');
+        }
+      }
+
+      // Aktivációs kódkezelés - MÓDOSÍTOTT VERZIÓ (Hibakezeléssel)
+      async _handleActivation() {
+        const codeInput = document.getElementById('activation-code');
+        // Biztosítjuk, hogy az authService létezzen
+        if (!this.authService) {
+            console.error("AuthService nem elérhető a _handleActivation hívásakor.");
+            this._showMessage('Hiba: Authentikációs szolgáltatás nem elérhető.', 'error');
+            return;
+        }
+
+        // Ellenőrizzük, hogy a codeInput létezik-e
+        if (!codeInput) {
+            console.error("Aktivációs kód beviteli mező nem található a _handleActivationben.");
+            this._showMessage('Hiba: Nem található a kód beviteli mező.', 'error');
+            return;
+        }
+        const code = codeInput.value.trim().toUpperCase();
+
+
+        if (!code) {
+          this._showMessage('Kérlek add meg az aktivációs kódot', 'error');
+          return;
+        }
+
+        // Gomb letiltása az ellenőrzés idejére
+        const activateBtn = document.getElementById('activate-btn');
+         if (!activateBtn) {
+            console.error("Aktivációs gomb nem található a _handleActivationben.");
+            // A folyamat mehet tovább, de a gombot nem tudjuk kezelni
+        } else {
+            activateBtn.disabled = true;
+            activateBtn.textContent = 'Ellenőrzés...';
+        }
+        this._showMessage(''); // Korábbi üzenet törlése
+
+        try {
+          // === Bejelentkezés biztosítása ===
+          let currentUser = this.authService.auth.currentUser;
+          // Ha nincs bejelentkezett felhasználó, próbáljunk meg bejelentkezni
+          if (!currentUser) {
+            console.log('Nincs aktív felhasználó, névtelen bejelentkezés megkísérlése...');
+            try {
+              await this.authService.signInAnonymously();
+              currentUser = this.authService.auth.currentUser; // Frissítjük a currentUser változót
+              if (!currentUser) {
+                // Ha a bejelentkezés után sincs felhasználó, az komoly hiba
+                throw new Error('Névtelen bejelentkezés sikertelen.');
+              }
+              console.log('Névtelen bejelentkezés sikeres:', currentUser.uid);
+            } catch (signInError) {
+              console.error('Névtelen bejelentkezési hiba:', signInError);
+              this._showMessage('Hiba történt a bejelentkezés során.', 'error');
+              if(activateBtn) { // Csak akkor állítjuk vissza, ha létezik
+                 activateBtn.disabled = false;
+                 activateBtn.textContent = 'Aktiválás';
+              }
+              return; // Megszakítjuk a folyamatot, ha a bejelentkezés nem sikerül
+            }
+          } else {
+             console.log('Aktív felhasználó már van:', currentUser.uid);
+          }
+          // === Bejelentkezés biztosítása VÉGE ===
+
+          // Most már van bejelentkezett felhasználó (currentUser), jöhet a kód ellenőrzése
+          this._showMessage('Kód ellenőrzése...', 'info'); // Tájékoztató üzenet
+          const verification = await this.authService.verifyActivationCode(code);
+
+          if (!verification.valid) {
+            this._showMessage(verification.message || 'Érvénytelen aktivációs kód', 'error');
+             if(activateBtn) {
+                 activateBtn.disabled = false;
+                 activateBtn.textContent = 'Aktiválás';
+              }
+            return;
+          }
+
+          // Ha a kód érvényes, de az eszköz már aktiválva van
+          if (verification.alreadyActivated) {
+            this._showMessage('Eszköz sikeresen azonosítva!', 'success');
+            // A currentUser biztosan létezik ekkorra
+            // Frissítsük a hitelesítési adatokat a local storage-ban (redundáns lehet, de biztosít)
+            await this.authService.storeCredentials(currentUser);
+
+          } else {
+            // Új aktiválás (első eszköz vagy új eszköz hozzáadása)
+            this._showMessage('Sikeres aktiváció! Eszköz hozzáadása...', 'success');
+            // A currentUser biztosan létezik ekkorra
+            // Kód megjelölése aktívként és eszköz hozzáadása
+            await this.authService.markCodeAsActive(code, currentUser.uid);
+            // Hitelesítés mentése
+            await this.authService.storeCredentials(currentUser);
+          }
+
+          // UI frissítése és átirányítás/könyvmegjelenítés
+          this.isActivated = true;
+
+          // Jelezzük a sikert az inicializáló kódnak (pl. az index.html-ben)
+          // Létrehozunk egy egyedi eseményt
+           const activationSuccessEvent = new Event('activationSuccess');
+           document.dispatchEvent(activationSuccessEvent);
+
+
+          // Kis szünet a sikeres üzenet megjelenítéséhez, majd UI eltüntetése
           setTimeout(() => {
+            this.remove(); // UI eltávolítása a remove() függvénnyel
+             console.log("Aktivációs felület eltávolítva.");
+             // Az alkalmazás indítását most már az index.html-ben lévő
+             // 'activationSuccess' eseményre figyelő kódnak kellene kezelnie.
+          }, 1500); // Késleltetés a sikeres üzenet olvashatóságáért
+
+        } catch (error) {
+          console.error('Aktiválási hiba a _handleActivationben:', error);
+          // Általános hibaüzenet, ha valami váratlan történik
+          // (pl. a bejelentkezés vagy a Firestore művelet dob kivételt)
+          this._showMessage('Hiba történt az aktiválás során: ' + error.message, 'error');
+
+          if (activateBtn) {
+            activateBtn.disabled = false;
+            activateBtn.textContent = 'Aktiválás';
+          }
+        }
+      }
+
+      // Aktivációs UI eltávolítása
+      remove() {
+        if (this.activationContainer) {
+          this.activationContainer.remove();
+          this.activationContainer = null; // Töröljük a referenciát is
+          console.log("Aktivációs konténer eltávolítva.");
+        }
+      }
+    }
+
+    // Globális AuthService és ActivationUI létrehozása
+    try {
+      updateLoadingMessage('auth');
+      window.authService = new AuthService();
+      window.activationUI = new ActivationUI();
+      console.log("AuthService és ActivationUI sikeresen létrehozva");
+    } catch (error) {
+      console.error("Hiba az AuthService vagy ActivationUI létrehozásakor:", error);
+      showErrorScreen("Hiba az authentikáció létrehozásakor: " + error.message);
+    }
+  </script>
+  
+  <!-- TypeScript-ből fordított JavaScript -->
+  <script src="flipbook-engine.js"></script>
+  
+  <!-- Fő alkalmazás inicializáció -->
+  <script>
+    // Eseményfigyelő az aktiváció sikeréhez - ELŐRE definiáljuk!
+    document.addEventListener('activationSuccess', function() {
+      console.log("Aktiváció sikeres esemény elkapva!");
+      
+      try {
+        updateLoadingMessage('book');
+        
+        // FlipbookEngine inicializálása az aktiváció után
+        const flipbook = new FlipbookEngine({
+          containerId: 'book-container',
+          totalPages: 300,
+          soundPath: 'sounds/pageturn-102978.mp3'
+        });
+        
+        // Betöltő képernyő elrejtése
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          setTimeout(() => {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+            }, 500);
+          }, 300);
+        }
+        
+        // Hang betöltése csak ha valóban szükséges
+        document.getElementById('flip-sound').preload = 'auto';
+        
+        console.log('Flipbook sikeres inicializálása az aktiváció után!');
+      } catch (err) {
+        console.error("Hiba a FlipbookEngine inicializálásakor:", err);
+        showErrorScreen("Nem sikerült betölteni a könyvet. Kérjük, próbáld újra.");
+      }
+    });
+
+    // Oldal betöltődésekor
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        console.log("DOMContentLoaded esemény aktiválva");
+        updateLoadingMessage('activation');
+        
+        // Aktiváció ellenőrzése
+        if (window.activationUI) {
+          const isActivated = await window.activationUI.initialize();
+          
+          // Ha aktiválva van, folytatjuk a normál inicializálást
+          if (isActivated) {
+            try {
+              updateLoadingMessage('book');
+              
+              // FlipbookEngine inicializálása
+              const flipbook = new FlipbookEngine({
+                containerId: 'book-container',
+                totalPages: 300,
+                soundPath: 'sounds/pageturn-102978.mp3'
+              });
+              
+              // Hang betöltése csak ha valóban szükséges
+              document.getElementById('flip-sound').preload = 'auto';
+              
+              // Betöltő képernyő elrejtése
+              const loadingScreen = document.getElementById('loading-screen');
+              if (loadingScreen) {
+                setTimeout(() => {
+                  loadingScreen.style.opacity = '0';
+                  setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                  }, 500);
+                }, 500);
+              }
+              
+              updateLoadingMessage('complete');
+              console.log('Minden sikeresen inicializálva');
+            } catch (err) {
+              console.error("Hiba a FlipbookEngine inicializálásakor:", err);
+              showErrorScreen("Nem sikerült betölteni a könyvet. Kérjük, próbáld újra.");
+            }
+          } else {
+            // Ha nincs aktiválva, elrejtjük a betöltő képernyőt,
+            // hogy látszódjon az aktivációs űrlap
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) {
               loadingScreen.style.display = 'none';
             }
-          }, 300);
+          }
+        } else {
+          console.error("Az activationUI nem érhető el!");
+          showErrorScreen("Nem sikerült inicializálni az aktivációs rendszert.");
         }
       } catch (error) {
         console.error('Hiba az inicializálás során:', error);
-        showError("Hiba történt az alkalmazás betöltésekor: " + (error.message || "Ismeretlen hiba"));
+        // Betöltő képernyő elrejtése hiba esetén
+        document.getElementById('loading-screen').style.display = 'none';
+        showErrorScreen("Hiba történt az alkalmazás inicializálásakor: " + error.message);
       }
     });
   </script>
   
-  <!-- === INSTALL PROMPT HANDLER === -->
+  <!-- Install prompt handler -->
   <script>
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', e => {
@@ -442,18 +1151,14 @@
       });
   </script>
 
-  <!-- Service Worker Regisztrálása -->
+  <!-- Service Worker regisztrálás -->
   <script>
     if ('serviceWorker' in navigator) {
-      // DOMContentLoaded után regisztráljuk, hogy ne lassítsa a kezdeti betöltést
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('./service-worker.js')
-          .then(() => console.log('Service Worker regisztrálva'))
-          .catch(err => console.error('SW hiba:', err));
-      });
+      navigator.serviceWorker
+        .register('./service-worker.js')
+        .then(() => console.log('Service Worker regisztrálva'))
+        .catch(err => console.error('SW hiba:', err));
     }
   </script>
-  
 </body>
 </html>
