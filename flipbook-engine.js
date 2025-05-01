@@ -562,19 +562,21 @@ class FlipbookEngine {
     
     // Tartalom megjelenítése a jogosultság ellenőrzés után
     _renderPage(pageId, content) {
-      // Konvertáljuk a pageId-t számmá, ha szükséges
-      let pageNumber = pageId === 'borito' ? 0 : parseInt(pageId, 10);
+      console.log(`Oldal renderelése: ${pageId}`);
       
-      // A megfelelő oldalszámú iframe kiválasztása vagy létrehozása
-      const iframe = this._getOrCreateIframe(pageNumber);
-      
-      if (!iframe) {
-        console.error(`Nem sikerült iframe-et találni a ${pageNumber}. oldalhoz`);
-        return;
-      }
-      
-      // Tartalom betöltése az iframe-be
       try {
+        // Konvertáljuk a pageId-t számmá, ha szükséges
+        let pageNumber = pageId === 'borito' ? 0 : parseInt(pageId, 10);
+        
+        // A megfelelő oldalszámú iframe kiválasztása vagy létrehozása
+        const iframe = this._getOrCreateIframe(pageNumber);
+        
+        if (!iframe) {
+          console.error(`Nem sikerült iframe-et találni a ${pageNumber}. oldalhoz`);
+          return;
+        }
+        
+        // Tartalom betöltése az iframe-be
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         iframeDoc.open();
         iframeDoc.write(content);
@@ -590,8 +592,10 @@ class FlipbookEngine {
         if (pageNumber === this.currentPage) {
           this._activatePage(pageNumber);
         }
+        
+        console.log(`Oldal sikeresen renderelve: ${pageId}`);
       } catch (error) {
-        console.error(`Hiba az iframe tartalom beállításakor (${pageId}):`, error);
+        console.error(`Hiba az oldal renderelése közben (${pageId}):`, error);
       }
     }
 

@@ -124,15 +124,19 @@
 	
   </style>
   
-  <!-- Token alapú jogosultságkezelés -->
-<script src="js/auth-token-service.js"></script>
-<script src="js/content-loader.js"></script>
-  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  
+  <!-- Firebase modulok -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth-service.js"></script>
+  <script src="js/activation-ui.js"></script>
 
+  <!-- Token alapú jogosultságkezelés -->
+  <script src="js/auth-token-service.js"></script>
+  <script src="js/content-loader.js"></script>
 
 </head>
 <body>
@@ -142,7 +146,7 @@
     📲 Telepítsd az alkalmazást a főképernyőre!<br>
     <small style="font-size:0.9em; opacity:0.8;">
       1. Kattints ide<br>
-      2. Válaszd: “Hozzáadás a Főképernyőhöz” lehetőséget!
+      2. Válaszd: "Hozzáadás a Főképernyőhöz" lehetőséget!
     </small>
   </div>
 
@@ -161,6 +165,7 @@
 
   <!-- TypeScript-ből fordított JavaScript -->
   <script src="flipbook-engine.js"></script>
+  
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       try {
@@ -203,7 +208,7 @@
     });
   </script>
   
-    <!-- === INSTALL PROMPT HANDLER === -->
+  <!-- === INSTALL PROMPT HANDLER === -->
   <script>
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', e => {
@@ -220,11 +225,6 @@
         deferredPrompt = null;
       });
   </script>
-<!-- Firebase modulok -->
-  <script src="js/firebase-config.js"></script>
-  <script src="js/auth-service.js"></script>
-  <script src="js/activation-ui.js"></script>
-  
   
   <script>
   if ('serviceWorker' in navigator) {

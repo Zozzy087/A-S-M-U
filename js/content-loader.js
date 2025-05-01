@@ -1,20 +1,42 @@
 /**
- * Biztonságos tartalom betöltő szolgáltatás - Kompatibilis verzió
+ * Tartalom betöltő szolgáltatás
  * Ez a szolgáltatás felelős a könyv oldalainak biztonságos betöltéséért,
  * ellenőrizve a hozzáférési jogosultságot minden egyes oldal betöltése előtt.
  */
-class SecureContentLoader {
+class ContentLoader {
   constructor() {
     this.pages = {}; // Gyorsítótár a betöltött oldalakhoz
     this.renderCallback = null; // Visszahívás függvény az oldalak megjelenítéséhez
     this.isInitialized = false;
     
-    // Csatlakozunk a Firebase hitelesítési eseményhez
-    if (window.firebaseApp && window.firebaseApp.auth) {
+    // Inicializálást késleltetjük, amíg a Firebase betöltődik
+    this._initWhenFirebaseReady();
+  }
+  
+  /**
+   * Inicializálás, amikor a Firebase elérhető
+   */
+  _initWhenFirebaseReady() {
+    // Ellenőrizzük, hogy a window.firebaseApp már létezik-e
+    if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.db) {
+      this._initWithFirebase();
+    } else {
+      // Ha még nem, várunk egy rövid ideig és újra próbáljuk
+      console.log('Várakozás a Firebase inicializálására ContentLoader számára...');
+      setTimeout(() => this._initWhenFirebaseReady(), 500);
+    }
+  }
+  
+  /**
+   * Inicializálás a Firebase-szel
+   */
+  _initWithFirebase() {
+    try {
       this.db = window.firebaseApp.db;
       this.isInitialized = true;
-    } else {
-      console.warn('Firebase nincs inicializálva! A tartalom betöltés korlátozott működésű lesz.');
+      console.log('ContentLoader inicializálva Firebase-szel');
+    } catch (error) {
+      console.error('Hiba a Firebase inicializálásakor ContentLoader számára:', error);
     }
   }
   
@@ -24,7 +46,7 @@ class SecureContentLoader {
    */
   setup(renderCallback) {
     this.renderCallback = renderCallback;
-    console.log('SecureContentLoader inicializálva');
+    console.log('ContentLoader beállítva renderCallback-kel');
   }
   
   /**
@@ -33,6 +55,23 @@ class SecureContentLoader {
    * @returns {Promise<boolean>} - Sikeres volt-e a betöltés
    */
   async loadContent(pageId) {
+    console.log(`Tartalom betöltése megkezdve: ${pageId}`);
+    
+    // Ha még nincs inicializálva, várjuk meg
+    if (!this.isInitialized) {
+      console.log('Várakozás a ContentLoader inicializálására...');
+      await new Promise(resolve => {
+        const checkInit = () => {
+          if (this.isInitialized) {
+            resolve();
+          } else {
+            setTimeout(checkInit, 100);
+          }
+        };
+        checkInit();
+      });
+    }
+    
     // Ha már be van töltve a cache-ben, onnan szolgáljuk ki
     if (this.pages[pageId]) {
       console.log(`Oldal betöltése cache-ből: ${pageId}`);
@@ -60,6 +99,7 @@ class SecureContentLoader {
       }
       
       // Ha egyik sem sikerült, hibaüzenetet jelenítünk meg
+      console.error(`Nem sikerült betölteni a tartalmat: ${pageId}`);
       this._renderErrorPage(pageId);
       return false;
     } catch (error) {
@@ -87,12 +127,14 @@ class SecureContentLoader {
         }
       }
       
+      console.log(`Fájl letöltése: ${pagePath}`);
       const response = await fetch(pagePath);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const content = await response.text();
+      console.log(`Fájl sikeresen betöltve: ${pagePath}`);
       return content;
     } catch (error) {
       console.warn(`Helyi fájl betöltése nem sikerült (${pageId}):`, error);
@@ -117,11 +159,13 @@ class SecureContentLoader {
         }
       }
       
+      console.log(`Firebase-ből oldal lekérése: ${pageId}`);
       const docRef = this.db.collection('pages').doc(pageId);
       const doc = await docRef.get();
       
       if (doc.exists) {
         const data = doc.data();
+        console.log(`Firebase-ből oldal sikeresen betöltve: ${pageId}`);
         return data.content || null;
       } else {
         console.warn(`Az oldal nem található a Firebase-ben: ${pageId}`);
@@ -150,14 +194,19 @@ class SecureContentLoader {
     
     // Ellenőrizzük, hogy van-e érvényes token
     if (!window.authTokenService) {
-      console.warn('Az authTokenService nem elérhető! Csak korlátozott hozzáférés lehetséges.');
+      console.warn('Az AuthTokenService nem elérhető! Csak korlátozott hozzáférés lehetséges.');
       const pageNum = parseInt(pageId, 10);
       return !isNaN(pageNum) && pageNum <= 3; // Csak az első 3 oldal elérhető
     }
     
-    // Token lekérése, ha nincs érvényes token, akkor nincs jogosultság
-    const token = await window.authTokenService.getAccessToken();
-    return !!token;
+    try {
+      // Token lekérése, ha nincs érvényes token, akkor nincs jogosultság
+      const token = await window.authTokenService.getAccessToken();
+      return !!token;
+    } catch (error) {
+      console.error('Hiba a token ellenőrzésekor:', error);
+      return false;
+    }
   }
   
   /**
@@ -239,4 +288,4 @@ class SecureContentLoader {
 }
 
 // Globális példány létrehozása, hogy az alkalmazás más részeiből is elérhető legyen
-window.contentLoader = new SecureContentLoader();
+window.contentLoader = new ContentLoader();

@@ -1,18 +1,45 @@
 /**
- * Token alapú jogosultságkezelés szolgáltatás - Kompatibilis verzió
+ * Token alapú jogosultságkezelés szolgáltatás
  * Ez a szolgáltatás kezeli a hozzáférési tokeneket, hogy a felhasználó csak akkor férjen hozzá 
  * a tartalmakhoz, ha a könyvet valóban aktiválta az eszközén.
  */
-class SecureTokenService {
+class AuthTokenService {
   constructor() {
     // Alapértelmezett beállítások
     this.tokenKey = 'flipbook_access_token';
-    this.tokenValidityMinutes = 30; // Token érvényessége percekben
+    // A token érvényessége másodpercekben - 10 másodperc a teszteléshez
+    this.tokenValiditySeconds = 10; 
     this.isInitialized = false;
     
-    // Csatlakozunk a Firebase hitelesítési eseményhez
+    // Inicializálást késleltetjük, amíg a Firebase betöltődik
+    this._initWhenFirebaseReady();
+  }
+  
+  /**
+   * Inicializálás, amikor a Firebase elérhető
+   */
+  _initWhenFirebaseReady() {
+    // Ellenőrizzük, hogy a window.firebaseApp már létezik-e
     if (window.firebaseApp && window.firebaseApp.auth) {
-      window.firebaseApp.auth.onAuthStateChanged(user => {
+      this._initWithFirebase();
+    } else {
+      // Ha még nem, várunk egy rövid ideig és újra próbáljuk
+      console.log('Várakozás a Firebase inicializálására...');
+      setTimeout(() => this._initWhenFirebaseReady(), 500);
+    }
+  }
+  
+  /**
+   * Inicializálás a Firebase-szel
+   */
+  _initWithFirebase() {
+    try {
+      // Firebase szolgáltatások mentése
+      this.auth = window.firebaseApp.auth;
+      this.db = window.firebaseApp.db;
+      
+      // Csatlakozunk a Firebase hitelesítési eseményhez
+      this.auth.onAuthStateChanged(user => {
         if (user) {
           this.userId = user.uid;
           this.refreshToken();
@@ -22,8 +49,9 @@ class SecureTokenService {
       });
       
       this.isInitialized = true;
-    } else {
-      console.warn('Firebase Auth nincs inicializálva! A token szolgáltatás korlátozott működésű lesz.');
+      console.log('AuthTokenService inicializálva Firebase-szel');
+    } catch (error) {
+      console.error('Hiba a Firebase inicializálásakor:', error);
     }
   }
   
@@ -31,6 +59,21 @@ class SecureTokenService {
    * Token lekérése (létrehozza, ha nem létezik)
    */
   async getAccessToken() {
+    // Ha még nincs inicializálva, várjuk meg
+    if (!this.isInitialized) {
+      console.log('Várakozás a token szolgáltatás inicializálására...');
+      await new Promise(resolve => {
+        const checkInit = () => {
+          if (this.isInitialized) {
+            resolve();
+          } else {
+            setTimeout(checkInit, 100);
+          }
+        };
+        checkInit();
+      });
+    }
+    
     // Ellenőrizzük a meglévő token érvényességét
     const existingToken = this.loadToken();
     if (existingToken && this.isTokenValid(existingToken)) {
@@ -56,12 +99,14 @@ class SecureTokenService {
       const tokenData = {
         userId: this.userId,
         timestamp: timestamp,
-        expires: timestamp + (this.tokenValidityMinutes * 60 * 1000),
+        expires: timestamp + (this.tokenValiditySeconds * 1000), // másodpercekben
         token: this._generateToken(this.userId, timestamp)
       };
       
       // Mentjük a tokent a localStorage-ba
       this._saveToken(tokenData);
+      
+      console.log(`Új token generálva, lejárat: ${new Date(tokenData.expires)} (${this.tokenValiditySeconds} másodperc múlva)`);
       
       return tokenData.token;
     } catch (error) {
@@ -100,7 +145,13 @@ class SecureTokenService {
     
     // Ellenőrizzük, hogy a token nem járt-e le
     const now = new Date().getTime();
-    return tokenData.expires > now;
+    const isValid = tokenData.expires > now;
+    
+    if (!isValid) {
+      console.log(`A token lejárt: ${new Date(tokenData.expires)}`);
+    }
+    
+    return isValid;
   }
   
   /**
@@ -140,4 +191,4 @@ class SecureTokenService {
 }
 
 // Globális példány létrehozása, hogy az alkalmazás más részeiből is elérhető legyen
-window.authTokenService = new SecureTokenService();
+window.authTokenService = new AuthTokenService();
