@@ -1,4 +1,4 @@
-// Aktivációs UI kezelő (MÓDOSÍTOTT ZÖLD STÍLUSSAL)
+// Aktivációs UI kezelő (JAVÍTOTT Verzió - Kétféle kódformátum kezelése)
 class ActivationUI {
   constructor() {
     // Fontos: Biztosítsd, hogy a window.authService már létezik, mire ez lefut.
@@ -11,9 +11,8 @@ class ActivationUI {
     }
     this.isActivated = false;
     this.activationContainer = null;
-    // Megengedőbb formátum ellenőrzés, ami kezeli a kötőjel nélküli bevitelt is a validálás előtt
-    // A tényleges XXXXX-XXXX-XXXX-XXXX formátumot a _formatActivationCode kezeli.
-    this.correctCodeFormat = /^[A-Z0-9-]+$/; // Engedélyezi a kötőjeleket is
+    // Ezt a regexet már nem használjuk a formázáshoz, de maradhat ellenőrzésre ha kell
+    // this.correctCodeFormat = /^[A-Z0-9-]+$/;
   }
 
   // Aktivációs UI inicializálása
@@ -48,12 +47,10 @@ class ActivationUI {
     if (document.getElementById('activation-container')) {
         console.log('[ActivationUI] Aktivációs konténer már létezik.');
         this.activationContainer = document.getElementById('activation-container');
-        // Esetleg itt meg lehetne jeleníteni, ha rejtve volt: this.activationContainer.style.display = 'flex';
         return;
     }
      if (this.activationContainer) {
          console.log('[ActivationUI] Aktivációs konténer objektum már létezik, de nincs a DOM-ban? Újra létrehozzuk.');
-         // Biztonság kedvéért nullázzuk, hogy újra létrehozza
          this.activationContainer = null;
      }
 
@@ -68,7 +65,9 @@ class ActivationUI {
           <h2>A Sötét Mágia Útvesztője</h2>
           <p>Köszönjük a vásárlást! A folytatáshoz add meg az aktivációs kódodat:</p>
           <div class="activation-form">
-            <input type="text" id="activation-code" placeholder="Kód beírása..." autocomplete="off" maxlength="23"> <button id="activate-btn">Aktiválás</button>
+            {/* Figyelem: a maxlength="19" a 4-4-4-4 formátumhoz jó, az 5-4-4(-4?) adminhoz lehet, hogy kevés! Átírva 23-ra. */}
+            <input type="text" id="activation-code" placeholder="Kód beírása..." autocomplete="off" maxlength="23">
+            <button id="activate-btn">Aktiválás</button>
           </div>
           <p id="activation-message" class="activation-message"></p>
           <p class="activation-info">Egy aktivációs kóddal a könyv akár 3 különböző eszközön is használható (PC, telefon, tablet).</p>
@@ -76,161 +75,67 @@ class ActivationUI {
       </div>
     `;
 
-    // Stílusok hozzáadása (ÚJ, ZÖLD STÍLUSOK)
+    // Stílusok hozzáadása (ZÖLD STÍLUSOK)
     const style = document.createElement('style');
     style.textContent = `
       .activation-overlay {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background-color: rgba(0, 0, 0, 0.90); /* Kicsit sötétebb háttér */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-        backdrop-filter: blur(3px); /* Opcionális: háttér elmosása */
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.90); display: flex; justify-content: center; align-items: center;
+        z-index: 10000; backdrop-filter: blur(3px);
       }
-
       .activation-card {
-        background-color: #1a1a1a; /* Sötét háttér */
-        color: #e0e0e0; /* Világosszürke szöveg */
-        border-radius: 8px;
-        padding: 2rem;
-        /* Ragyogó zöld keret és árnyék */
-        border: 1px solid #32CD32; /* LimeGreen keret */
-        box-shadow: 0 0 20px 5px rgba(50, 205, 50, 0.5); /* LimeGreen ragyogás */
-        max-width: 90%;
-        width: 400px;
-        text-align: center;
-        font-family: 'Cinzel', serif; /* Marad a Cinzel, vagy lehet Roboto? */
+        background-color: #1a1a1a; color: #e0e0e0; border-radius: 8px; padding: 2rem;
+        border: 1px solid #32CD32; box-shadow: 0 0 20px 5px rgba(50, 205, 50, 0.5);
+        max-width: 90%; width: 400px; text-align: center; font-family: 'Cinzel', serif;
       }
-
-      .activation-card h2 {
-        /* Cím színe, lehet a ragyogó zöld */
-        color: #32CD32; /* LimeGreen */
-        margin-bottom: 1.5rem;
-        text-shadow: 0 0 5px rgba(50, 205, 50, 0.7); /* Enyhe zöld szövegárnyék */
-      }
-
-      .activation-form {
-        margin: 1.5rem 0;
-      }
-
+      .activation-card h2 { color: #32CD32; margin-bottom: 1.5rem; text-shadow: 0 0 5px rgba(50, 205, 50, 0.7); }
+      .activation-form { margin: 1.5rem 0; }
       #activation-code {
-        width: 100%;
-        padding: 0.75rem;
-        background-color: #333; /* Sötétszürke háttér */
-        /* Bemeneti mező kerete is lehet zöld */
-        border: 1px solid #32CD32; /* LimeGreen keret */
-        border-radius: 4px;
-        color: #e0e0e0; /* Világos szövegszín */
-        font-size: 1rem;
-        margin-bottom: 1rem;
-        text-align: center;
-        letter-spacing: 2px;
-        box-sizing: border-box; /* Hozzáadva, hogy a padding ne növelje a méretet */
+        width: 100%; padding: 0.75rem; background-color: #333; border: 1px solid #32CD32; border-radius: 4px;
+        color: #e0e0e0; font-size: 1rem; margin-bottom: 1rem; text-align: center; letter-spacing: 2px; box-sizing: border-box;
       }
-
-      #activation-code::placeholder { /* Placeholder stílus */
-         color: #888;
-         opacity: 0.7;
-      }
-
-      #activation-code:focus {
-         /* Kiemelés, ha belekattintunk */
-         outline: none;
-         box-shadow: 0 0 8px rgba(50, 205, 50, 0.6);
-      }
-
+      #activation-code::placeholder { color: #888; opacity: 0.7; }
+      #activation-code:focus { outline: none; box-shadow: 0 0 8px rgba(50, 205, 50, 0.6); }
       #activate-btn {
-        /* Gomb háttérszíne zöld */
-        background-color: #368B27; /* Sötétebb zöld, mint a keret */
-        color: #ffffff; /* Fehér szöveg */
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1rem;
-        border-radius: 4px;
-        cursor: pointer;
-        font-family: 'Cinzel', serif;
-        transition: background-color 0.3s, box-shadow 0.3s, transform 0.1s;
-        box-shadow: 0 0 5px rgba(54, 139, 39, 0.5); /* Enyhe gomb árnyék */
+        background-color: #368B27; color: #ffffff; border: none; padding: 0.75rem 2rem; font-size: 1rem; border-radius: 4px;
+        cursor: pointer; font-family: 'Cinzel', serif; transition: background-color 0.3s, box-shadow 0.3s, transform 0.1s;
+        box-shadow: 0 0 5px rgba(54, 139, 39, 0.5);
       }
-
-      #activate-btn:hover {
-        /* Világosabb zöld hover */
-        background-color: #4CAF50; /* Kicsit világosabb zöld */
-        box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
-      }
-
-       #activate-btn:active {
-         /* Kis effekt gombnyomásra */
-         transform: scale(0.98);
-       }
-
-       #activate-btn:disabled {
-           background-color: #555;
-           color: #999;
-           cursor: not-allowed;
-           box-shadow: none;
-       }
-
-      /* Üzenetek stílusa */
-      .activation-message {
-        min-height: 1.5rem;
-        margin-top: 1rem;
-        font-weight: bold;
-        color: #ff6b6b; /* Hibaüzenet színe (pirosas) - ezt meghagyhatjuk */
-      }
-
-      .activation-message.success {
-        color: #32CD32; /* Sikeres üzenet színe (zöld) */
-      }
-
-      /* Információs szöveg */
-      .activation-info {
-        font-size: 0.9rem;
-        color: #cccccc;
-        margin-top: 1.5rem;
-        opacity: 0.8;
-      }
-    `; // <-- Itt a backtick vége
+      #activate-btn:hover { background-color: #4CAF50; box-shadow: 0 0 10px rgba(76, 175, 80, 0.7); }
+      #activate-btn:active { transform: scale(0.98); }
+      #activate-btn:disabled { background-color: #555; color: #999; cursor: not-allowed; box-shadow: none; }
+      .activation-message { min-height: 1.5rem; margin-top: 1rem; font-weight: bold; color: #ff6b6b; }
+      .activation-message.success { color: #32CD32; }
+      .activation-info { font-size: 0.9rem; color: #cccccc; margin-top: 1.5rem; opacity: 0.8; }
+    `;
 
     // Stílusok hozzáadása a head-hez (csak egyszer)
     if (!document.querySelector('style[data-activation-style]')) {
-        style.setAttribute('data-activation-style', 'true'); // Jelöljük, hogy már hozzáadtuk
+        style.setAttribute('data-activation-style', 'true');
         document.head.appendChild(style);
     }
 
     // Konténer hozzáadása a body-hoz
     document.body.appendChild(this.activationContainer);
 
-    // Eseménykezelők hozzáadása (biztosítva, hogy az elemek léteznek)
+    // Eseménykezelők hozzáadása
     const activateBtn = document.getElementById('activate-btn');
     const codeInput = document.getElementById('activation-code');
 
     if (activateBtn) {
-        // Esetleges régi listener eltávolítása (biztonsági lépés)
-        // activateBtn.removeEventListener('click', this._handleActivationBound); // Ha lenne bound verzió
-        // Új listener hozzáadása
-         this._handleActivationBound = this._handleActivationBound || this._handleActivation.bind(this); // Bindeljük, ha még nem tettük
+         this._handleActivationBound = this._handleActivationBound || this._handleActivation.bind(this);
          activateBtn.addEventListener('click', this._handleActivationBound);
     } else {
         console.error("[ActivationUI] Aktivációs gomb nem található!");
     }
 
     if (codeInput) {
-       // Esetleges régi listener eltávolítása
-       // codeInput.removeEventListener('keypress', this._handleEnterKeyBound);
-       // codeInput.removeEventListener('input', this._handleInputFormattingBound);
-
-       // Új listenerek hozzáadása
         this._handleEnterKeyBound = this._handleEnterKeyBound || ((e) => { if (e.key === 'Enter') this._handleActivation(); }).bind(this);
-        this._handleInputFormattingBound = this._handleInputFormattingBound || this._formatInputOnType.bind(this);
+        // === JAVÍTÁS ITT: A régi logikát használó formázó függvényt kötjük be ===
+        this._handleInputFormattingBound = this._handleInputFormattingBound || this._formatInputOnType_Combined.bind(this); // A JAVÍTOTT FUNKCIÓT HASZNÁLJUK
 
         codeInput.addEventListener('keypress', this._handleEnterKeyBound);
-        codeInput.addEventListener('input', this._handleInputFormattingBound);
-
-        // Fókusz beállítása a beviteli mezőre
+        codeInput.addEventListener('input', this._handleInputFormattingBound); // A JAVÍTOTT FUNKCIÓT HASZNÁLJUK
         codeInput.focus();
     } else {
         console.error("[ActivationUI] Aktivációs kód beviteli mező nem található!");
@@ -240,55 +145,85 @@ class ActivationUI {
   }
 
 
-   /**
-    * Segédfüggvény a beviteli mező formázásához gépelés közben
-    */
-   _formatInputOnType(event) {
-        const inputElement = event.target;
-        let value = inputElement.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Csak nagybetűk és számok
-        let formattedValue = '';
-        const segmentLengths = [5, 4, 4, 4]; // XXXXX-XXXX-XXXX-XXXX
-        let currentPos = 0;
+  // =========================================================================
+  // == JAVÍTOTT KÓDFORMÁZÓ FÜGGVÉNY (a régi logika alapján) ==
+  // =========================================================================
+  /**
+   * Segédfüggvény a beviteli mező formázásához gépelés közben
+   * Támogatja az 5-4-4 (admin) és 4-4-4-4 (normál) formátumokat is.
+   */
+  _formatInputOnType_Combined(event) {
+    const inputElement = event.target;
+    // 1. Aktuális érték és kurzorpozíció mentése
+    const originalValue = inputElement.value;
+    const originalCursorPos = inputElement.selectionStart;
 
-        for (let i = 0; i < segmentLengths.length; i++) {
-            const segment = value.substring(currentPos, currentPos + segmentLengths[i]);
-            if (segment.length > 0) {
-                formattedValue += (formattedValue.length > 0 ? '-' : '') + segment;
-                currentPos += segment.length;
-            } else {
-                break; // Nincs több karakter
-            }
-        }
+    // 2. Érték tisztítása: Nagybetűsítés, csak A-Z, 0-9 engedélyezése a logikához
+    let cleanValue = originalValue.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-        // Frissítjük az input értékét, ha szükséges
-        // Figyelünk a kurzor pozícióra is, hogy ne ugorjon el gépelés közben
-        if (inputElement.value !== formattedValue) {
-            const selectionStart = inputElement.selectionStart;
-            const selectionEnd = inputElement.selectionEnd;
-            const diff = formattedValue.length - inputElement.value.length; // Hány kötőjel került be/ki
+    // 3. Formátum meghatározása és kötőjelek alkalmazása
+    let formattedValue = '';
+    const isAdminCode = cleanValue.startsWith('ADMIN'); // Ellenőrizzük az ADMIN prefixet
 
-            inputElement.value = formattedValue;
+    let segments;
+    if (isAdminCode) {
+      // Admin kód: 5-4-4-4 (vagy amilyen hosszú valójában)
+      segments = [5, 4, 4, 4]; // Igazítsd a valós admin kód hosszakhoz, ha szükséges
+    } else {
+      // Normál kód: 4-4-4-4
+      segments = [4, 4, 4, 4];
+    }
 
-            // Próbáljuk megőrizni a kurzor pozícióját
-             // Egyszerűsített logika: ha nőtt a hossz (kötőjel be), növeljük a pozíciót
-             if (selectionStart !== null && selectionEnd !== null) {
-                 const newPos = selectionStart + (diff > 0 ? diff : 0);
-                 // Kerüljük a kötőjelre pozicionálást
-                 if (formattedValue[newPos -1] === '-' && diff > 0) {
-                    // inputElement.setSelectionRange(newPos + 1, newPos + 1);
-                    // Inkább csak simán állítsuk be, a böngésző talán jobban kezeli
-                    inputElement.setSelectionRange(newPos, newPos);
-                 } else {
-                     inputElement.setSelectionRange(newPos, newPos);
-                 }
-             }
-        }
-   }
+    let currentPos = 0;
+    let segmentIndex = 0;
+    while (currentPos < cleanValue.length && segmentIndex < segments.length) {
+      const segmentLength = segments[segmentIndex];
+      const segment = cleanValue.substring(currentPos, currentPos + segmentLength);
+      if (segment.length > 0) {
+        formattedValue += (formattedValue.length > 0 ? '-' : '') + segment;
+        currentPos += segment.length;
+        segmentIndex++;
+      } else {
+        break; // Nincs több karakter
+      }
+    }
+    // Ha maradt még karakter a várt szegmensek után (nem kellene, de biztos, ami biztos)
+    if (currentPos < cleanValue.length) {
+         formattedValue += (formattedValue.length > 0 ? '-' : '') + cleanValue.substring(currentPos);
+    }
+
+    // 4. Maximális hossz korlátozása (az input maxlength alapján)
+    const maxLength = inputElement.maxLength > 0 ? inputElement.maxLength : (isAdminCode ? 22 : 19); // Becsült max hossz
+    formattedValue = formattedValue.substring(0, maxLength);
+
+    // 5. Érték frissítése és kurzor pozíció visszaállítása, ha az érték változott
+    if (originalValue !== formattedValue) {
+      // Számoljuk ki az új kurzorpozíciót a kötőjelek figyelembevételével
+      let newCursorPos = originalCursorPos;
+      // Ahogy adunk hozzá/veszünk el kötőjeleket, a kurzor elmozdulhat
+      // Ez a kurzor pozíció számítás egyszerűsített, nem tökéletes minden esetben
+      // De megpróbálja követni a relatív helyet
+      let originalHyphens = (originalValue.substring(0, originalCursorPos).match(/-/g) || []).length;
+      let newHyphens = (formattedValue.substring(0, originalCursorPos + (formattedValue.length - originalValue.length)).match(/-/g) || []).length; // Becslés
+      newCursorPos += (newHyphens - originalHyphens);
+      newCursorPos = Math.max(0, Math.min(formattedValue.length, newCursorPos)); // Korlátok közé szorítás
+
+
+      inputElement.value = formattedValue;
+
+      // Kurzort csak a renderelés után állítjuk be
+      requestAnimationFrame(() => {
+           inputElement.setSelectionRange(newCursorPos, newCursorPos);
+       });
+    }
+  }
+  // =========================================================================
+  // == JAVÍTOTT KÓDFORMÁZÓ FÜGGVÉNY VÉGE ==
+  // =========================================================================
 
 
   // Aktivációs üzenet megjelenítése
   _showMessage(message, isSuccess = false) {
-    // Biztosítjuk, hogy a konténer létezik
     if (!this.activationContainer || !document.body.contains(this.activationContainer)) {
         console.warn("[ActivationUI] Üzenet megjelenítése sikertelen, az aktivációs konténer nem található.");
         return;
@@ -298,28 +233,17 @@ class ActivationUI {
          console.warn("[ActivationUI] Üzenet elem (#activation-message) nem található.");
          return;
     }
-
     messageElement.textContent = message;
     messageElement.className = 'activation-message' + (isSuccess ? ' success' : '');
   }
 
-
-  // Aktivációs kód formázása az ellenőrzéshez (már nem szükséges itt, a _handleActivation-ben történik)
-  /*
-  _formatActivationCode(code) {
-     // Ezt a logikát áthelyeztük a _handleActivation-be
-  }
-  */
-
   // Aktivációs kódkezelés
   async _handleActivation() {
-     // Ellenőrizzük, hogy az authService elérhető-e
      if (!this.authService) {
          console.error("[ActivationUI] AuthService nem elérhető a _handleActivation során.");
          this._showMessage("Hiba: A hitelesítési szolgáltatás nem érhető el.");
          return;
      }
-     // Ellenőrizzük, hogy a container létezik-e még
      if (!this.activationContainer || !document.body.contains(this.activationContainer)) {
          console.warn("[ActivationUI] Aktivációs konténer már nem létezik (_handleActivation).");
          return;
@@ -334,7 +258,6 @@ class ActivationUI {
         return;
     }
 
-
     const rawCode = codeInput.value.trim();
 
     if (!rawCode) {
@@ -342,23 +265,11 @@ class ActivationUI {
       return;
     }
 
-    // Formázás és Validálás (pl. XXXXX-XXXX-XXXX-XXXX formátumra)
-     // Eltávolítjuk a nem alfanumerikus karaktereket (kivéve a kötőjelet) és nagybetűsítjük
-     let formattedCode = rawCode.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-     // Eltávolítjuk a felesleges kötőjeleket és biztosítjuk a helyes formátumot
-     formattedCode = formattedCode.replace(/-+/g, '-').replace(/^-|-$/g, ''); // Dupla, kezdő, záró kötőjelek törlése
-
-     // Itt lehetne egy szigorúbb regex ellenőrzés is a VÉGLEGES formátumra, pl.:
-     const finalFormatRegex = /^[A-Z0-9]{5}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-     // Vagy /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/ a 4-4-4-4 formátumhoz
-     // Ezt a kódot most nem használjuk, de megfontolandó
-     /*
-     if (!finalFormatRegex.test(formattedCode)) {
-         this._showMessage('Érvénytelen kódformátum. (Pl.: ABCDE-1234-...)');
-         return;
-     }
-     */
-     const code = formattedCode; // Használjuk a tisztított kódot
+    // --- Fontos: A kódot itt már a BEGÉPELT (formázott) formában használjuk ---
+    // Az authService feladata lesz a kötőjelek kezelése/eltávolítása, ha szükséges
+    // Vagy itt is tisztíthatjuk:
+    // const codeToSend = rawCode.replace(/-/g, ''); // Kötőjelek nélküli verzió küldése
+    const code = rawCode; // Meghagyjuk a formázottat, az authService kezeli
 
     // --- Kezdődik a tényleges aktivációs logika ---
     activateBtn.disabled = true;
@@ -366,8 +277,6 @@ class ActivationUI {
     this._showMessage(''); // Töröljük az előző üzenetet
 
     try {
-      // Névtelen bejelentkezés, ha még nincs user (ez már meg kellett volna történjen az initialize-ban?)
-      // Biztonság kedvéért itt is ellenőrizzük/megpróbáljuk
       let currentUser = this.authService.auth.currentUser;
       if (!currentUser) {
         console.log('[ActivationUI] Nincs bejelentkezett user, névtelen bejelentkezés megkísérlése...');
@@ -379,51 +288,45 @@ class ActivationUI {
          console.log('[ActivationUI] Névtelen bejelentkezés sikeres.');
       }
 
-
-      // 1. Kód ellenőrzése (csak validitás és limitek)
       console.log(`[ActivationUI] Kód ellenőrzése Firestore-ban: ${code}`);
       const verification = await this.authService.verifyActivationCode(code);
 
       if (!verification.valid) {
         console.warn(`[ActivationUI] Kód ellenőrzés sikertelen: ${verification.message}`);
         this._showMessage(verification.message || 'Érvénytelen vagy már teljesen felhasznált aktivációs kód.');
+        // Hiba esetén input mező tartalmát nem töröljük, hogy javítható legyen
         activateBtn.disabled = false;
         activateBtn.textContent = 'Aktiválás';
-        return;
+        return; // Fontos, hogy itt megálljunk hiba esetén
       }
 
-      // Ha a kód érvényes (létezik és van rajta hely VAGY ez az eszköz már aktiválva van vele)
-      console.log('[ActivationUI] Kód ellenőrzés sikeres (vagy már aktivált). Folytatás: kód megjelölése/token kérése.');
+      console.log('[ActivationUI] Kód ellenőrzés sikeres. Folytatás: kód megjelölése/token kérése.');
       activateBtn.textContent = 'Aktiválás...';
 
-      // 2. Kód használtként jelölése / Eszköz hozzáadása ÉS Token kérése
-      // A markCodeAsUsed most már magában foglalja a token kérést is!
       await this.authService.markCodeAsUsed(code, currentUser.uid);
       console.log('[ActivationUI] markCodeAsUsed sikeresen lefutott (token kérés elindítva).');
 
-      // 3. Hitelesítési adatok mentése (opcionális, csak a user ID-t menti)
+      // Várjunk egy kicsit, hogy a token lekérésnek legyen esélye lefutni a háttérben
+      // Ez nem garantálja, de növeli az esélyt, hogy a reload után már legyen token
+      await new Promise(resolve => setTimeout(resolve, 500)); // Fél másodperc várakozás
+
+      // Hitelesítési adatok mentése (opcionális)
       await this.authService.storeCredentials(currentUser);
 
-      // Sikeres üzenet megjelenítése
-       this._showMessage('Sikeres aktiváció!', true);
-
-      // UI állapot frissítése és eltüntetése
+      this._showMessage('Sikeres aktiváció!', true);
       this.isActivated = true;
+
       setTimeout(() => {
-        this.remove(); // UI eltávolítása
-        // Itt lehetne jelezni az index.html-nek, hogy inicializálja a FlipbookEngine-t
-         // pl. egy egyedi eseménnyel: document.dispatchEvent(new Event('activationComplete'));
-         // Vagy az index.html figyelhetné a this.isActivated változását (bonyolultabb)
-         // Legegyszerűbb: Újratöltjük az oldalt, ami most már bejelentkezve fog indulni
+        this.remove();
+         // Újratöltjük az oldalt a sikeres aktiváció után
          location.reload();
-      }, 1500); // Kis késleltetés, hogy látszódjon a sikeres üzenet
+      }, 1500); // Késleltetés a sikeres üzenet miatt
 
     } catch (error) {
       console.error('[ActivationUI] Aktiválási hiba a _handleActivation try blokkban:', error);
       // Próbáljuk meg a hibaüzenetet megjeleníteni a felhasználónak
       this._showMessage(error.message || 'Ismeretlen hiba történt az aktiválás során.');
 
-      // Gomb újra aktívvá tétele
       if (activateBtn) {
          activateBtn.disabled = false;
          activateBtn.textContent = 'Aktiválás';
@@ -435,7 +338,6 @@ class ActivationUI {
   remove() {
     if (this.activationContainer && this.activationContainer.parentNode) {
        console.log('[ActivationUI] Aktivációs UI eltávolítása.');
-       // Eseménykezelők eltávolítása (opcionális, de tiszta)
         const activateBtn = this.activationContainer.querySelector('#activate-btn');
         const codeInput = this.activationContainer.querySelector('#activation-code');
          if (activateBtn && this._handleActivationBound) {
@@ -447,7 +349,7 @@ class ActivationUI {
          }
 
        this.activationContainer.parentNode.removeChild(this.activationContainer);
-       this.activationContainer = null; // Nullázzuk a referenciát
+       this.activationContainer = null;
     }
   }
 } // <-- ActivationUI osztály vége
@@ -456,23 +358,18 @@ class ActivationUI {
 if (window.authService) {
     window.activationUI = new ActivationUI();
 } else {
-    // Ha az auth-service.js később töltődne be
     console.warn("[ActivationUI] Várakozás a window.authService elérhetőségére...");
     const checkUIInterval = setInterval(() => {
-        // Figyeljük az authService ÉS a firebaseApp elérhetőségét is
         if (window.authService && window.firebaseApp) {
             clearInterval(checkUIInterval);
             window.activationUI = new ActivationUI();
             console.log("[ActivationUI] Globális példány létrehozva késleltetéssel.");
-            // Esetleg itt újra kellene futtatni az initialize-t? Vagy az index.html gondoskodik róla?
-            // Ha az index.html DOMContentLoaded-ben hívja, akkor valószínűleg jó lesz.
         }
     }, 100);
-    // Időtúllépés
     setTimeout(() => {
         if (!window.activationUI) {
              clearInterval(checkUIInterval);
             console.error("[ActivationUI] Időtúllépés: window.authService vagy window.firebaseApp nem lett elérhető!");
         }
-    }, 5000); // 5 másodperc várakozás
+    }, 5000);
 }
