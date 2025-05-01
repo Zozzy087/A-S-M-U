@@ -71,7 +71,7 @@ class ActivationUI {
             <input type="text" id="activation-code" placeholder="Kód beírása..." autocomplete="off" maxlength="23"> <button id="activate-btn">Aktiválás</button>
           </div>
           <p id="activation-message" class="activation-message"></p>
-          <p class="activation-info">Egy aktivációs kóddal a könyv akár 3 különböző eszközön is használható.</p>
+          <p class="activation-info">Egy aktivációs kóddal a könyv akár 3 különböző eszközön is használható (PC, telefon, tablet).</p>
         </div>
       </div>
     `;
