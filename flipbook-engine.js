@@ -274,14 +274,33 @@ class FlipbookEngine {
 
     // Új oldalletöltő függvény
     loadPage(pageNumber) {
+        console.log(`loadPage hívva: ${pageNumber}`);
+        
+        // Ellenőrzés: érvényes oldalszám
+        if (pageNumber < 0 || pageNumber > this.totalPages) {
+            console.error(`Érvénytelen oldalszám: ${pageNumber}`);
+            return;
+        }
+        
         // Ha van ContentLoader, azt használjuk (biztonságos)
         if (window.contentLoader) {
             const pageId = pageNumber === 0 ? 'borito' : pageNumber.toString();
-            return window.contentLoader.loadContent(pageId);
+            console.log(`ContentLoader használata a betöltéshez: ${pageId}`);
+            window.contentLoader.loadContent(pageId)
+                .then(success => {
+                    // A loadContent után frissítjük a navigációs gombokat
+                    this.currentPage = pageNumber;
+                    this.updateNavigationVisibility();
+                    console.log(`Oldal betöltve ContentLoader-rel: ${pageId}, sikeres: ${success}`);
+                })
+                .catch(error => {
+                    console.error(`Hiba a ContentLoader használatakor: ${error}`);
+                });
         } 
         // Ellenkező esetben visszatérünk az eredeti betöltési logikához
         else {
-            return this._originalLoadPage(pageNumber);
+            console.log(`Eredeti betöltési logika használata: ${pageNumber}`);
+            this._originalLoadPage(pageNumber);
         }
     }
     
@@ -380,12 +399,15 @@ class FlipbookEngine {
      * Navigációs menü megjelenítése
      */
     showNavigationMenu() {
+        console.log('Navigációs menü megjelenítése');
+        
         // Ellenőrizzük, hogy a navigációs menü már látható-e
         const existingMenu = document.querySelector('.navigation-menu');
         if (existingMenu) {
             existingMenu.remove();
             return;
         }
+        
         // Menü létrehozása
         const menu = document.createElement('div');
         menu.className = 'navigation-menu';
@@ -400,6 +422,7 @@ class FlipbookEngine {
         menu.style.padding = '15px';
         menu.style.zIndex = '10000';
         menu.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.5)';
+        
         // Menü cím
         const title = document.createElement('div');
         title.style.color = 'white';
@@ -409,6 +432,7 @@ class FlipbookEngine {
         title.style.textAlign = 'center';
         title.textContent = 'Navigáció';
         menu.appendChild(title);
+        
         // Fejezetek listázása
         this.chapters.forEach(chapter => {
             const item = document.createElement('div');
@@ -419,32 +443,45 @@ class FlipbookEngine {
             item.style.cursor = 'pointer';
             item.style.borderRadius = '5px';
             item.style.transition = 'background-color 0.2s';
+            
             // Jelenlegi oldal kiemelése
             if (this.currentPage === chapter.page) {
                 item.style.backgroundColor = 'rgba(127, 0, 255, 0.5)';
                 item.style.fontWeight = 'bold';
             }
+            
             item.textContent = `${chapter.title} (${chapter.page}. oldal)`;
+            
             // Kattintás eseménykezelő
             item.addEventListener('click', () => {
+                console.log(`Navigációs menüből oldal betöltése: ${chapter.page}`);
                 this.loadPage(chapter.page);
                 menu.remove();
+                
+                // Explicit beállítjuk az aktuális oldalt és frissítjük a navigációs gombokat
+                this.currentPage = chapter.page;
+                this.updateNavigationVisibility();
             });
+            
             // Hover effekt
             item.addEventListener('mouseenter', () => {
                 if (this.currentPage !== chapter.page) {
                     item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                 }
             });
+            
             item.addEventListener('mouseleave', () => {
                 if (this.currentPage !== chapter.page) {
                     item.style.backgroundColor = 'transparent';
                 }
             });
+            
             menu.appendChild(item);
         });
+        
         // Menü hozzáadása a dokumentumhoz
         document.body.appendChild(menu);
+        
         // Kattintás bárhová a menün kívül bezárja azt
         document.addEventListener('click', (e) => {
             const target = e.target;
@@ -453,34 +490,47 @@ class FlipbookEngine {
             }
         }, { once: true });
     }
-   /**
+    
+    /**
      * Navigációs gombok láthatóságának frissítése az aktuális oldal alapján
-   */
+     */
     updateNavigationVisibility() {
+        console.log('Navigációs gombok frissítése, aktuális oldal:', this.currentPage);
+        
         const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
+        
         // Bal gomb frissítése (hátra lapozás)
         if (this.leftButton) {
-            if (this.currentPage <= 0 || this.currentPage >= 2) { // Itt a módosítás: hozzáadva a || this.currentPage >= 4 feltétel
+            // Csak a 0-ik oldalon (borítón) rejtjük el
+            if (this.currentPage <= 0) {
+                // Borítón elrejtjük a bal gombot
                 this.leftButton.style.opacity = '0';
                 this.leftButton.style.pointerEvents = 'none';
-            }
-            else {
+                console.log('Bal gomb elrejtve - borítólapon vagyunk');
+            } else {
+                // Minden más oldalon megjelenítjük
                 this.leftButton.style.opacity = '1';
                 this.leftButton.style.pointerEvents = 'auto';
+                console.log('Bal gomb megjelenítve');
             }
         }
+        
         // Jobb gomb frissítése (előre lapozás)
         if (this.rightButton) {
             if (this.currentPage >= maxFreePageNavigation) {
+                // Ha elértük vagy túlléptük a max szabad lapozási limitet, elrejtjük
                 this.rightButton.style.opacity = '0';
                 this.rightButton.style.pointerEvents = 'none';
-            }
-            else {
+                console.log('Jobb gomb elrejtve - elértük a max. lapozási limitet');
+            } else {
+                // Egyébként mutatjuk (borítólapon és 1. oldalon)
                 this.rightButton.style.opacity = '1';
                 this.rightButton.style.pointerEvents = 'auto';
+                console.log('Jobb gomb megjelenítve');
             }
         }
     }
+    
     /**
      * Értesítés megjelenítése
      */
@@ -588,10 +638,8 @@ class FlipbookEngine {
         // Jelezzük, hogy az oldal készen áll
         iframe.dataset.loaded = 'true';
         
-        // Aktiváljuk az oldalt, ha ez az aktuális oldal
-        if (pageNumber === this.currentPage) {
-          this._activatePage(pageNumber);
-        }
+        // Aktiváljuk az oldalt (minden esetben)
+        this._activatePage(pageNumber);
         
         console.log(`Oldal sikeresen renderelve: ${pageId}`);
       } catch (error) {
@@ -678,6 +726,9 @@ class FlipbookEngine {
     
     // Aktív oldal beállítása
     _activatePage(pageNumber) {
+      console.log(`Oldal aktiválása: ${pageNumber}`);
+      
+      // Beállítjuk az aktuális oldal számát
       this.currentPage = pageNumber;
       
       // Navigációs gombok frissítése
@@ -685,6 +736,8 @@ class FlipbookEngine {
       
       // A data-page attribútum frissítése a body tag-en
       document.body.setAttribute('data-page', pageNumber.toString());
+      
+      console.log(`Oldal sikeresen aktiválva: ${pageNumber}`);
     }
 }
 // Exportálás
