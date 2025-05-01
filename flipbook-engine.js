@@ -453,38 +453,34 @@ class FlipbookEngine {
             }
         }, { once: true });
     }
-    /**
- * Navigációs gombok láthatóságának frissítése az aktuális oldal alapján
- */
-updateNavigationVisibility() {
-    const maxFreePageNavigation = 2; // Maximum oldalszám, ameddig a lapozás engedélyezett
-    
-    // Bal gomb frissítése (hátra lapozás)
-    if (this.leftButton) {
-        // A bal gomb csak a főoldalon (0) legyen elrejtve
-        if (this.currentPage <= 0) {
-            this.leftButton.style.opacity = '0';
-            this.leftButton.style.pointerEvents = 'none';
-        } else {
-            this.leftButton.style.opacity = '1';
-            this.leftButton.style.pointerEvents = 'auto';
+   /**
+     * Navigációs gombok láthatóságának frissítése az aktuális oldal alapján
+   */
+    updateNavigationVisibility() {
+        const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
+        // Bal gomb frissítése (hátra lapozás)
+        if (this.leftButton) {
+            if (this.currentPage <= 0 || this.currentPage >= 2) { // Itt a módosítás: hozzáadva a || this.currentPage >= 4 feltétel
+                this.leftButton.style.opacity = '0';
+                this.leftButton.style.pointerEvents = 'none';
+            }
+            else {
+                this.leftButton.style.opacity = '1';
+                this.leftButton.style.pointerEvents = 'auto';
+            }
+        }
+        // Jobb gomb frissítése (előre lapozás)
+        if (this.rightButton) {
+            if (this.currentPage >= maxFreePageNavigation) {
+                this.rightButton.style.opacity = '0';
+                this.rightButton.style.pointerEvents = 'none';
+            }
+            else {
+                this.rightButton.style.opacity = '1';
+                this.rightButton.style.pointerEvents = 'auto';
+            }
         }
     }
-    
-    // Jobb gomb frissítése (előre lapozás)
-    if (this.rightButton) {
-        // A jobb gomb csak akkor legyen elrejtve, ha túlléptük a maxFreePageNavigation-t
-        if (this.currentPage >= maxFreePageNavigation) {
-            this.rightButton.style.opacity = '0';
-            this.rightButton.style.pointerEvents = 'none';
-        } else {
-            this.rightButton.style.opacity = '1';
-            this.rightButton.style.pointerEvents = 'auto';
-        }
-    }
-    
-    console.log(`Navigációs gombok frissítése: oldal=${this.currentPage}, bal=${this.leftButton?.style.opacity}, jobb=${this.rightButton?.style.opacity}`);
-}
     /**
      * Értesítés megjelenítése
      */
