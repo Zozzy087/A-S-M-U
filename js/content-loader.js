@@ -1,422 +1,242 @@
 /**
- * Tartalombetöltő és jogosultságkezelő
- * Ez a modul felel a tartalom biztonságos betöltéséért és megjelenítéséért
+ * Biztonságos tartalom betöltő szolgáltatás - Kompatibilis verzió
+ * Ez a szolgáltatás felelős a könyv oldalainak biztonságos betöltéséért,
+ * ellenőrizve a hozzáférési jogosultságot minden egyes oldal betöltése előtt.
  */
-class ContentLoader {
+class SecureContentLoader {
   constructor() {
-    this.authTokenService = window.authTokenService;
-    this.auth = window.firebaseApp.auth;
-    this.db = window.firebaseApp.db;
-    this.isLoading = false;
-    this.activePageId = null;
+    this.pages = {}; // Gyorsítótár a betöltött oldalakhoz
+    this.renderCallback = null; // Visszahívás függvény az oldalak megjelenítéséhez
+    this.isInitialized = false;
     
-    // Callback funkció a tartalom megjelenítésére
-    this.renderCallback = null;
-    
-    // Tartalom gyorsítótár
-    this.contentCache = {};
-    
-    // Cache élettartam (30 perc)
-    this.cacheTTL = 30 * 60 * 1000;
-    
-    // Betöltő overlay
-    this.loadingOverlay = null;
-    
-    // Átirányítási eseményfigyelő
-    window.addEventListener('popstate', (event) => {
-      this._handleNavigation();
-    });
-    
-    // Első betöltéskor ellenőrizzük a jogosultságot
-    window.addEventListener('DOMContentLoaded', () => {
-      this._handleNavigation();
-    });
-    
-    // Rendszeres jogosultság ellenőrzés (percenként)
-    setInterval(() => {
-      if (this.activePageId) {
-        this.verifyAccess(this.activePageId);
-      }
-    }, 60000);
+    // Csatlakozunk a Firebase hitelesítési eseményhez
+    if (window.firebaseApp && window.firebaseApp.auth) {
+      this.db = window.firebaseApp.db;
+      this.isInitialized = true;
+    } else {
+      console.warn('Firebase nincs inicializálva! A tartalom betöltés korlátozott működésű lesz.');
+    }
   }
   
   /**
-   * Kezdeti beállítás
-   * @param {Function} renderCallback - A tartalom megjelenítéséért felelős callback
+   * Beállítás
+   * @param {Function} renderCallback - Függvény, ami megjeleníti az oldalakat
    */
   setup(renderCallback) {
     this.renderCallback = renderCallback;
-    this._createLoadingOverlay();
-    console.log('ContentLoader inicializálva');
-  }
-  
-  /**
-   * Betöltő overlay létrehozása
-   * @private
-   */
-  _createLoadingOverlay() {
-    this.loadingOverlay = document.createElement('div');
-    this.loadingOverlay.id = 'content-loading-overlay';
-    this.loadingOverlay.style.cssText = `
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s, visibility 0.3s;
-    `;
-    
-    this.loadingOverlay.innerHTML = `
-      <div class="loading-spinner" style="
-        width: 50px;
-        height: 50px;
-        border: 5px solid #7f00ff;
-        border-radius: 50%;
-        border-top-color: transparent;
-        animation: spin 1s linear infinite;
-      "></div>
-      <style>
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      </style>
-    `;
-    
-    document.body.appendChild(this.loadingOverlay);
-  }
-  
-  /**
-   * Betöltő megjelenítése
-   * @private
-   */
-  _showLoading() {
-    if (this.loadingOverlay) {
-      this.loadingOverlay.style.opacity = '1';
-      this.loadingOverlay.style.visibility = 'visible';
-    }
-  }
-  
-  /**
-   * Betöltő elrejtése
-   * @private
-   */
-  _hideLoading() {
-    if (this.loadingOverlay) {
-      this.loadingOverlay.style.opacity = '0';
-      this.loadingOverlay.style.visibility = 'hidden';
-    }
-  }
-  
-  /**
-   * Navigáció kezelése
-   * @private
-   */
-  async _handleNavigation() {
-    // Kivonjuk a pageId-t az URL-ből
-    const urlParams = new URLSearchParams(window.location.search);
-    const pageId = urlParams.get('page') || 'borito';
-    
-    // Ha már ez az oldal aktív, nem csinálunk semmit
-    if (pageId === this.activePageId) return;
-    
-    // Ellenőrizzük a jogosultságot és betöltjük a tartalmat
-    await this.loadContent(pageId);
+    console.log('SecureContentLoader inicializálva');
   }
   
   /**
    * Tartalom betöltése
-   * @param {string} pageId - A betöltendő oldal azonosítója
-   * @public
+   * @param {string} pageId - Az oldal azonosítója (pl. "1", "2", "borito")
+   * @returns {Promise<boolean>} - Sikeres volt-e a betöltés
    */
   async loadContent(pageId) {
+    // Ha már be van töltve a cache-ben, onnan szolgáljuk ki
+    if (this.pages[pageId]) {
+      console.log(`Oldal betöltése cache-ből: ${pageId}`);
+      this._renderContent(pageId, this.pages[pageId]);
+      return true;
+    }
+    
     try {
-      if (this.isLoading) return;
-      this.isLoading = true;
-      this._showLoading();
-      
-      console.log(`Tartalom betöltése: ${pageId}`);
-      
-      // Jogosultság ellenőrzése
-      const hasAccess = await this.verifyAccess(pageId);
-      if (!hasAccess) {
-        console.error(`Nincs jogosultság a tartalomhoz: ${pageId}`);
-        this._showAccessDenied();
-        this.isLoading = false;
-        this._hideLoading();
-        return false;
-      }
-      
-      // Gyorsítótárból betöltés, ha elérhető és nem járt le
-      if (this.contentCache[pageId] && 
-          this.contentCache[pageId].timestamp > Date.now() - this.cacheTTL) {
-        console.log(`Tartalom betöltése gyorsítótárból: ${pageId}`);
-        this._renderContent(pageId, this.contentCache[pageId].content);
-        this.isLoading = false;
-        this._hideLoading();
+      // Először megpróbáljuk a helyi fájlból betölteni
+      const content = await this._loadFromFile(pageId);
+      if (content) {
+        this.pages[pageId] = content;
+        this._renderContent(pageId, content);
         return true;
       }
       
-      // Tartalom lekérése a szerverről
-      const content = await this._fetchContent(pageId);
-      if (!content) {
-        console.error(`Nem sikerült betölteni a tartalmat: ${pageId}`);
-        this._showError();
-        this.isLoading = false;
-        this._hideLoading();
-        return false;
+      // Ha helyi betöltés nem sikerült, megpróbáljuk a Firebase-ből
+      if (this.isInitialized) {
+        const firebaseContent = await this._loadFromFirebase(pageId);
+        if (firebaseContent) {
+          this.pages[pageId] = firebaseContent;
+          this._renderContent(pageId, firebaseContent);
+          return true;
+        }
       }
       
-      // Tartalom mentése a gyorsítótárba
-      this.contentCache[pageId] = {
-        content: content,
-        timestamp: Date.now()
-      };
-      
-      // Tartalom megjelenítése
-      this._renderContent(pageId, content);
-      
-      // Állapot frissítése
-      this.activePageId = pageId;
-      
-      // URL frissítése
-      this._updateURL(pageId);
-      
-      this.isLoading = false;
-      this._hideLoading();
-      return true;
+      // Ha egyik sem sikerült, hibaüzenetet jelenítünk meg
+      this._renderErrorPage(pageId);
+      return false;
     } catch (error) {
-      console.error('Hiba a tartalom betöltésekor:', error);
-      this._showError();
-      this.isLoading = false;
-      this._hideLoading();
+      console.error(`Hiba az oldal betöltésekor (${pageId}):`, error);
+      this._renderErrorPage(pageId);
       return false;
     }
   }
   
   /**
-   * Tartalom lekérése a szerverről
-   * @param {string} pageId - A lekérendő oldal azonosítója
-   * @private
+   * Helyi fájlból való betöltés
+   * @param {string} pageId - Az oldal azonosítója
+   * @returns {Promise<string|null>} - A betöltött tartalom vagy null
    */
-  async _fetchContent(pageId) {
+  async _loadFromFile(pageId) {
     try {
-      // Token beszerzése
-      const token = await this.authTokenService.getAccessToken();
-      if (!token) {
-        throw new Error('Nem sikerült hozzáférési tokent generálni');
+      // Az oldal betöltése a pages mappából
+      const pagePath = pageId === 'borito' ? 'pages/borito.html' : `pages/${pageId}.html`;
+      
+      // Token ellenőrzés, kivéve a borítólapnál
+      if (pageId !== 'borito') {
+        if (!await this._hasAccessToPage(pageId)) {
+          console.warn(`Nincs jogosultság az oldal megtekintéséhez: ${pageId}`);
+          return null;
+        }
       }
       
-      // Fejléc beállítások
-      const headers = new Headers();
-      headers.append('Authorization', `Bearer ${token}`);
-      
-      // Tartalom lekérése
-      const url = `pages/${pageId}.html`;
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: headers,
-        credentials: 'same-origin'
-      });
-      
+      const response = await fetch(pagePath);
       if (!response.ok) {
-        throw new Error(`HTTP hiba: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const content = await response.text();
       return content;
     } catch (error) {
-      console.error('Hiba a tartalom lekérésekor:', error);
+      console.warn(`Helyi fájl betöltése nem sikerült (${pageId}):`, error);
       return null;
     }
+  }
+  
+  /**
+   * Firebase-ből való betöltés
+   * @param {string} pageId - Az oldal azonosítója
+   * @returns {Promise<string|null>} - A betöltött tartalom vagy null
+   */
+  async _loadFromFirebase(pageId) {
+    if (!this.isInitialized) return null;
+    
+    try {
+      // Token ellenőrzés, kivéve a borítólapnál
+      if (pageId !== 'borito') {
+        if (!await this._hasAccessToPage(pageId)) {
+          console.warn(`Nincs jogosultság az oldal megtekintéséhez: ${pageId}`);
+          return null;
+        }
+      }
+      
+      const docRef = this.db.collection('pages').doc(pageId);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const data = doc.data();
+        return data.content || null;
+      } else {
+        console.warn(`Az oldal nem található a Firebase-ben: ${pageId}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`Firebase betöltés hiba (${pageId}):`, error);
+      return null;
+    }
+  }
+  
+  /**
+   * Jogosultság ellenőrzése egy oldalhoz
+   * @param {string} pageId - Az oldal azonosítója
+   * @returns {Promise<boolean>} - Van-e jogosultság
+   */
+  async _hasAccessToPage(pageId) {
+    // A borító mindig elérhető
+    if (pageId === 'borito') return true;
+    
+    // Ha a Firebase nincs inicializálva, csak az első néhány oldalt engedélyezzük
+    if (!this.isInitialized) {
+      const pageNum = parseInt(pageId, 10);
+      return !isNaN(pageNum) && pageNum <= 3; // Első 3 oldal elérhető
+    }
+    
+    // Ellenőrizzük, hogy van-e érvényes token
+    if (!window.authTokenService) {
+      console.warn('Az authTokenService nem elérhető! Csak korlátozott hozzáférés lehetséges.');
+      const pageNum = parseInt(pageId, 10);
+      return !isNaN(pageNum) && pageNum <= 3; // Csak az első 3 oldal elérhető
+    }
+    
+    // Token lekérése, ha nincs érvényes token, akkor nincs jogosultság
+    const token = await window.authTokenService.getAccessToken();
+    return !!token;
   }
   
   /**
    * Tartalom megjelenítése
    * @param {string} pageId - Az oldal azonosítója
    * @param {string} content - A megjelenítendő tartalom
-   * @private
    */
   _renderContent(pageId, content) {
-    if (!this.renderCallback) {
-      console.error('Nincs beállítva renderCallback');
-      return;
+    if (this.renderCallback) {
+      this.renderCallback(pageId, content);
+    } else {
+      console.error('Nincs beállítva renderCallback függvény!');
     }
-    
-    // Biztonságos tartalom előkészítése
-    const secureContent = this._prepareSecureContent(content, pageId);
-    
-    // Callback hívása a tartalom megjelenítéséhez
-    this.renderCallback(pageId, secureContent);
   }
   
   /**
-   * Biztonságos tartalom előkészítése (copy-paste védelem, stb.)
-   * @param {string} content - Az eredeti tartalom
+   * Hibaoldal megjelenítése
    * @param {string} pageId - Az oldal azonosítója
-   * @private
    */
-  _prepareSecureContent(content, pageId) {
-    // Itt adhatunk hozzá védelmeket a HTML tartalomhoz
-    // Pl. script injektálása, amely megakadályozza a másolást, képernyőképet, stb.
-    
-    // Egyszerű példa: no-copy attribútumok hozzáadása
-    let secureContent = content
-      .replace(/<body/g, '<body oncopy="return false" oncut="return false" oncontextmenu="return false"')
-      .replace(/<img/g, '<img draggable="false" oncontextmenu="return false"')
-      .replace(/<div/g, '<div oncontextmenu="return false"');
-    
-    // Data-page attribútum hozzáadása a követéshez
-    secureContent = secureContent.replace(/<body([^>]*)>/g, '<body$1 data-page-id="' + pageId + '">');
-    
-    return secureContent;
-  }
-  
-  /**
-   * URL frissítése
-   * @param {string} pageId - Az új oldal azonosítója
-   * @private
-   */
-  async _updateURL(pageId) {
-    const token = await this.authTokenService.getAccessToken();
-    const newURL = new URL(window.location.href);
-    
-    // Oldal azonosító beállítása
-    newURL.searchParams.set('page', pageId);
-    
-    // Token hozzáadása
-    if (token) {
-      const shortToken = token.split('-')[0] + '-...-' + token.split('-').pop();
-      newURL.searchParams.set('t', shortToken);
-    }
-    
-    // Böngésző előzmények frissítése
-    window.history.pushState({ pageId: pageId }, '', newURL.toString());
-  }
-  
-  /**
-   * Jogosultság ellenőrzése adott tartalomhoz
-   * @param {string} pageId - Az ellenőrizendő oldal azonosítója
-   * @public
-   */
-  async verifyAccess(pageId) {
-    try {
-      // A borító oldalt mindig elérhetővé tesszük
-      if (pageId === 'borito') return true;
-      
-      // Ellenőrizzük, hogy be van-e jelentkezve
-      if (!this.auth.currentUser) {
-        console.log('Nincs bejelentkezett felhasználó');
-        return false;
-      }
-      
-      // Jogosultság ellenőrzése a token service-szel
-      const hasAccess = await this.authTokenService.verifyContentAccess(pageId);
-      return hasAccess;
-    } catch (error) {
-      console.error('Hiba a jogosultság ellenőrzésekor:', error);
-      return false;
-    }
-  }
-  
-  /**
-   * Hozzáférés megtagadva képernyő megjelenítése
-   * @private
-   */
-  _showAccessDenied() {
-    const overlay = document.createElement('div');
-    overlay.id = 'access-denied-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.9);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
-      color: #fff;
-      font-family: 'Cinzel', serif;
-      text-align: center;
+  _renderErrorPage(pageId) {
+    const errorContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Hiba</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          text-align: center;
+          padding: 50px;
+          background-color: #f5f5f5;
+        }
+        .error-container {
+          max-width: 500px;
+          margin: 0 auto;
+          background-color: white;
+          padding: 30px;
+          border-radius: 10px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+          color: #e74c3c;
+        }
+        p {
+          margin-bottom: 20px;
+          font-size: 16px;
+          line-height: 1.5;
+        }
+        .button {
+          display: inline-block;
+          padding: 10px 20px;
+          background-color: #3498db;
+          color: white;
+          text-decoration: none;
+          border-radius: 5px;
+          font-weight: bold;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="error-container">
+        <h1>Az oldal nem érhető el</h1>
+        <p>Sajnáljuk, de ez a tartalom nem elérhető. Ez a következő okok miatt lehet:</p>
+        <ul style="text-align: left;">
+          <li>Nem aktiváltad még a könyvedet ezen az eszközön</li>
+          <li>A munkameneted lejárt (30 perc után automatikusan lejár)</li>
+          <li>Nincs internetkapcsolat, ami szükséges az ellenőrzéshez</li>
+        </ul>
+        <p>Kérjük, jelentkezz be vagy aktiváld újra a könyvet a főoldalon!</p>
+        <a href="index.html" class="button">Vissza a főoldalra</a>
+      </div>
+    </body>
+    </html>
     `;
     
-    overlay.innerHTML = `
-      <h2 style="color: #7f00ff; margin-bottom: 1rem;">Hozzáférés megtagadva</h2>
-      <p>Nincs jogosultságod a kért tartalomhoz.</p>
-      <p>Kérlek aktiváld a könyvet a megfelelő aktivációs kóddal.</p>
-      <button id="activate-now-btn" style="
-        background-color: #7f00ff;
-        color: #fff;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1rem;
-        border-radius: 4px;
-        cursor: pointer;
-        font-family: 'Cinzel', serif;
-        margin-top: 2rem;
-      ">Aktiválás most</button>
-    `;
-    
-    document.body.appendChild(overlay);
-    
-    document.getElementById('activate-now-btn').addEventListener('click', () => {
-      overlay.remove();
-      window.location.href = '?page=borito';
-    });
-  }
-  
-  /**
-   * Hiba képernyő megjelenítése
-   * @private
-   */
-  _showError() {
-    const overlay = document.createElement('div');
-    overlay.id = 'error-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.9);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
-      color: #fff;
-      font-family: 'Cinzel', serif;
-      text-align: center;
-    `;
-    
-    overlay.innerHTML = `
-      <h2 style="color: #ff5555; margin-bottom: 1rem;">Hiba történt</h2>
-      <p>A tartalom betöltése sikertelen.</p>
-      <p>Kérjük, ellenőrizd az internetkapcsolatot és próbáld újra.</p>
-      <button id="retry-btn" style="
-        background-color: #7f00ff;
-        color: #fff;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1rem;
-        border-radius: 4px;
-        cursor: pointer;
-        font-family: 'Cinzel', serif;
-        margin-top: 2rem;
-      ">Újrapróbálkozás</button>
-    `;
-    
-    document.body.appendChild(overlay);
-    
-    document.getElementById('retry-btn').addEventListener('click', () => {
-      overlay.remove();
-      window.location.reload();
-    });
+    this._renderContent(pageId, errorContent);
   }
 }
 
-// Exportáljuk a szolgáltatást
-window.contentLoader = new ContentLoader();
+// Globális példány létrehozása, hogy az alkalmazás más részeiből is elérhető legyen
+window.contentLoader = new SecureContentLoader();
