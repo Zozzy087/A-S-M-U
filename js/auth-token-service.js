@@ -1,194 +1,251 @@
 /**
- * Token alapú jogosultságkezelés szolgáltatás
- * Ez a szolgáltatás kezeli a hozzáférési tokeneket, hogy a felhasználó csak akkor férjen hozzá 
- * a tartalmakhoz, ha a könyvet valóban aktiválta az eszközén.
+ * Token alapú jogosultságkezelés szolgáltatás (Biztonságos Verzió)
+ * Ez a szolgáltatás kezeli a biztonságos, szerver által generált hozzáférési tokeneket.
  */
 class AuthTokenService {
   constructor() {
-    // Alapértelmezett beállítások
-    this.tokenKey = 'flipbook_access_token';
-    // A token érvényessége másodpercekben - 10 másodperc a teszteléshez
-    this.tokenValiditySeconds = 10; 
+    this.tokenKey = 'flipbook_secure_access_token'; // Kulcs a localStorage-ban
+    this.tokenData = null; // Itt tároljuk a memóriában az aktuális tokent és adatait
     this.isInitialized = false;
-    
-    // Inicializálást késleltetjük, amíg a Firebase betöltődik
+    this.tokenFetchInProgress = false; // Jelzi, ha már folyamatban van token kérés
+
     this._initWhenFirebaseReady();
   }
-  
+
   /**
    * Inicializálás, amikor a Firebase elérhető
    */
   _initWhenFirebaseReady() {
-    // Ellenőrizzük, hogy a window.firebaseApp már létezik-e
-    if (window.firebaseApp && window.firebaseApp.auth) {
+    if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.functions) {
       this._initWithFirebase();
     } else {
-      // Ha még nem, várunk egy rövid ideig és újra próbáljuk
-      console.log('Várakozás a Firebase inicializálására...');
+      console.log('Várakozás a Firebase inicializálására (AuthTokenService)...');
       setTimeout(() => this._initWhenFirebaseReady(), 500);
     }
   }
-  
+
   /**
    * Inicializálás a Firebase-szel
    */
   _initWithFirebase() {
     try {
-      // Firebase szolgáltatások mentése
       this.auth = window.firebaseApp.auth;
-      this.db = window.firebaseApp.db;
-      
-      // Csatlakozunk a Firebase hitelesítési eseményhez
+      this.functions = window.firebaseApp.functions;
+      this.isInitialized = true;
+      console.log('AuthTokenService (Secure) inicializálva Firebase-szel');
+
+      // Megpróbáljuk betölteni a tokent a localStorage-ból indításkor
+      this._loadTokenFromStorage();
+
+      // Figyeljük a bejelentkezési állapot változását
       this.auth.onAuthStateChanged(user => {
-        if (user) {
-          this.userId = user.uid;
-          this.refreshToken();
-        } else {
+        if (!user) {
+          // Kijelentkezéskor töröljük a tokent
           this.clearToken();
+          console.log('[AuthTokenService] Felhasználó kijelentkezett, token törölve.');
+        } else {
+          // Bejelentkezéskor nem kérünk automatikusan tokent,
+          // csak ha van tárolt, akkor ellenőrizzük
+           this._loadTokenFromStorage();
+           console.log('[AuthTokenService] Felhasználó bejelentkezve/állapot változott.');
         }
       });
-      
-      this.isInitialized = true;
-      console.log('AuthTokenService inicializálva Firebase-szel');
+
     } catch (error) {
-      console.error('Hiba a Firebase inicializálásakor:', error);
+      console.error('Hiba a Firebase inicializálásakor (AuthTokenService):', error);
     }
   }
-  
+
   /**
-   * Token lekérése (létrehozza, ha nem létezik)
+   * Biztonságos token lekérése és tárolása a Cloud Function hívásával.
+   * Ezt a funkciót az `AuthService` hívja meg sikeres aktiváció után.
+   * @param {string} activationCode - Az aktiváláshoz használt kód.
+   * @returns {Promise<string|null>} - A sikeresen lekért és tárolt token, vagy null hiba esetén.
    */
-  async getAccessToken() {
-    // Ha még nincs inicializálva, várjuk meg
+  async fetchAndStoreSecureToken(activationCode) {
     if (!this.isInitialized) {
-      console.log('Várakozás a token szolgáltatás inicializálására...');
-      await new Promise(resolve => {
-        const checkInit = () => {
-          if (this.isInitialized) {
-            resolve();
-          } else {
-            setTimeout(checkInit, 100);
-          }
-        };
-        checkInit();
-      });
-    }
-    
-    // Ellenőrizzük a meglévő token érvényességét
-    const existingToken = this.loadToken();
-    if (existingToken && this.isTokenValid(existingToken)) {
-      return existingToken.token;
-    }
-    
-    // Ha nincs érvényes token, kérünk újat
-    return this.refreshToken();
-  }
-  
-  /**
-   * Token frissítése a Firebase-ből
-   */
-  async refreshToken() {
-    if (!this.isInitialized || !this.userId) {
-      console.warn('A token szolgáltatás nincs inicializálva vagy a felhasználó nincs bejelentkezve!');
+      console.warn('[AuthTokenService] Szolgáltatás még nem inicializálódott a token kéréshez.');
       return null;
     }
-    
+    if (!this.auth.currentUser) {
+      console.warn('[AuthTokenService] Nincs bejelentkezett felhasználó a token kéréshez.');
+      return null;
+    }
+    if (this.tokenFetchInProgress) {
+        console.log('[AuthTokenService] Token kérés már folyamatban van.');
+        return null; // Vagy várhatunk a meglévő promiser-a
+    }
+
+    this.tokenFetchInProgress = true;
+    console.log(`[AuthTokenService] Biztonságos token kérése a Cloud Function-től a ${activationCode} kóddal.`);
+
     try {
-      // A felhasználó egyedi azonosítója és az aktuális időbélyeg alapján generálunk tokent
-      const timestamp = new Date().getTime();
-      const tokenData = {
-        userId: this.userId,
-        timestamp: timestamp,
-        expires: timestamp + (this.tokenValiditySeconds * 1000), // másodpercekben
-        token: this._generateToken(this.userId, timestamp)
-      };
-      
-      // Mentjük a tokent a localStorage-ba
-      this._saveToken(tokenData);
-      
-      console.log(`Új token generálva, lejárat: ${new Date(tokenData.expires)} (${this.tokenValiditySeconds} másodperc múlva)`);
-      
-      return tokenData.token;
+      const generateTokenFunc = this.functions.httpsCallable('generateSecureToken');
+      const result = await generateTokenFunc({ activationCode: activationCode });
+
+      if (result && result.data && result.data.token) {
+        const token = result.data.token;
+        console.log('[AuthTokenService] Sikeres token fogadás a Cloud Function-től.');
+
+        // JWT token dekódolása (opcionális, csak az érvényesség ellenőrzéséhez kellhet)
+        const payload = this._decodeJwtPayload(token);
+        const expires = payload ? payload.exp * 1000 : Date.now() + 30 * 60 * 1000; // Ha nincs exp, 30 percet feltételezünk
+
+         const tokenData = {
+           token: token,
+           expires: expires, // Lejárati idő ezredmásodpercben
+           fetchedAt: Date.now()
+         };
+
+        this._saveToken(tokenData); // Mentés memóriába és localStorage-ba
+        this.tokenFetchInProgress = false;
+        return token;
+      } else {
+        console.error('[AuthTokenService] Érvénytelen válasz a Cloud Function-től:', result);
+        throw new Error('Nem sikerült érvényes tokent kapni.');
+      }
     } catch (error) {
-      console.error('Hiba történt a token frissítésekor:', error);
+      console.error('[AuthTokenService] Hiba a Cloud Function hívása vagy token feldolgozása közben:', error);
+      // Hibakezelés: Megjeleníthetjük a felhasználónak az üzenetet
+      let message = 'Hiba történt a hozzáférés ellenőrzésekor.';
+      if (error.message) {
+          message = error.message; // A Cloud Function által dobott hibaüzenet
+      }
+      // Itt lehetne egy globális hibaüzenet megjelenítő mechanizmust hívni
+      // pl. window.showGlobalError(message);
+      this.tokenFetchInProgress = false;
+      this.clearToken(); // Hiba esetén töröljük a régit is
       return null;
+    } finally {
+        this.tokenFetchInProgress = false;
     }
   }
-  
+
   /**
-   * Token betöltése a localStorage-ból
+   * Aktuális, érvényes token lekérése.
+   * Ha van érvényes token a memóriában/storage-ban, azt adja vissza.
+   * Nem próbál meg új tokent kérni, azt az aktivációnak kell intéznie.
+   * @returns {string|null} - Az érvényes token, vagy null, ha nincs.
    */
-  loadToken() {
+  getAccessToken() {
+    // Először a memóriában lévő tokent ellenőrizzük
+    if (this.tokenData && this.isTokenValid(this.tokenData)) {
+        // console.log('[AuthTokenService] Érvényes token a memóriából.');
+        return this.tokenData.token;
+    }
+
+    // Ha nincs a memóriában, próbáljuk a storage-ból
+    const storedTokenData = this._loadTokenFromStorage();
+     if (storedTokenData && this.isTokenValid(storedTokenData)) {
+        console.log('[AuthTokenService] Érvényes token betöltve a localStorage-ból.');
+        this.tokenData = storedTokenData; // Betöltjük a memóriába is
+        return this.tokenData.token;
+    }
+
+    // console.log('[AuthTokenService] Nincs érvényes tárolt token.');
+    return null; // Nincs érvényes token
+  }
+
+
+  /**
+   * Token törlése (memóriából és localStorage-ból)
+   */
+  clearToken() {
+    this.tokenData = null;
+    try {
+      localStorage.removeItem(this.tokenKey);
+    } catch (e) {
+      console.error('[AuthTokenService] Hiba a token törlésekor a localStorage-ból:', e);
+    }
+     console.log('[AuthTokenService] Token törölve.');
+  }
+
+  /**
+   * Token érvényességének ellenőrzése (lejárat alapján)
+   */
+  isTokenValid(tokenData) {
+    if (!tokenData || !tokenData.token || !tokenData.expires) {
+        // console.log('[AuthTokenService] Token érvénytelen: hiányzó adatok.');
+        return false;
+    }
+
+    const now = Date.now();
+    const isValid = tokenData.expires > now;
+
+    // if (!isValid) {
+    //    console.log(`[AuthTokenService] Token lejárt: ${new Date(tokenData.expires)}`);
+    // }
+
+    return isValid;
+  }
+
+   /**
+    * Token mentése (memóriába és localStorage-ba)
+    */
+   _saveToken(tokenData) {
+     if (!tokenData || !tokenData.token) {
+       console.error('[AuthTokenService] Hiba: Érvénytelen token adat a mentéshez.');
+       return;
+     }
+     this.tokenData = tokenData; // Memóriába mentés
+     try {
+       localStorage.setItem(this.tokenKey, JSON.stringify(tokenData));
+       console.log(`[AuthTokenService] Token mentve, lejár: ${new Date(tokenData.expires)}`);
+     } catch (e) {
+       console.error('[AuthTokenService] Hiba a token mentésekor a localStorage-ba:', e);
+     }
+   }
+
+
+  /**
+   * Token betöltése a localStorage-ból a memóriába.
+   * @returns {object|null} A betöltött token adat objektum, vagy null.
+   */
+  _loadTokenFromStorage() {
     try {
       const tokenString = localStorage.getItem(this.tokenKey);
       if (!tokenString) return null;
-      
-      return JSON.parse(tokenString);
+
+      const parsedData = JSON.parse(tokenString);
+      // Alapvető validálás
+       if (parsedData && parsedData.token && parsedData.expires) {
+           // Csak akkor töltjük be a memóriába, ha még érvényes lehet
+           if (this.isTokenValid(parsedData)) {
+               this.tokenData = parsedData;
+               // console.log('[AuthTokenService] Token betöltve a localStorage-ból a memóriába.');
+               return parsedData;
+           } else {
+               console.log('[AuthTokenService] Lejárt token található a localStorage-ban, törölve.');
+               this.clearToken(); // Töröljük a lejárt tokent
+               return null;
+           }
+       }
+       return null;
     } catch (e) {
-      console.error('Hiba a token betöltésekor:', e);
+      console.error('[AuthTokenService] Hiba a token betöltésekor a localStorage-ból:', e);
       return null;
     }
   }
-  
+
   /**
-   * Token törlése
+   * Dekódolja a JWT payload részét Base64-ből (nem ellenőrzi az aláírást!).
+   * Csak a payload kinyerésére szolgál, pl. a lejárati idő kiolvasásához.
    */
-  clearToken() {
-    localStorage.removeItem(this.tokenKey);
-  }
-  
-  /**
-   * Token érvényességének ellenőrzése
-   */
-  isTokenValid(tokenData) {
-    if (!tokenData || !tokenData.expires) return false;
-    
-    // Ellenőrizzük, hogy a token nem járt-e le
-    const now = new Date().getTime();
-    const isValid = tokenData.expires > now;
-    
-    if (!isValid) {
-      console.log(`A token lejárt: ${new Date(tokenData.expires)}`);
-    }
-    
-    return isValid;
-  }
-  
-  /**
-   * Token generálása (egyszerű hash)
-   * Valódi környezetben ezt szerver oldalon kellene végezni, biztonsági okokból
-   */
-  _generateToken(userId, timestamp) {
-    // Egyszerű token generálás a userId és timestamp alapján
-    const combinedString = `${userId}-${timestamp}-${window.location.hostname}`;
-    return this._simpleHash(combinedString);
-  }
-  
-  /**
-   * Egyszerű hash függvény (nem kriptográfiai célokra)
-   */
-  _simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // 32-bites egésszé konvertálás
-    }
-    // Pozitív hexadecimális stringgé alakítás
-    return (hash >>> 0).toString(16);
-  }
-  
-  /**
-   * Token mentése a localStorage-ba
-   */
-  _saveToken(tokenData) {
-    try {
-      localStorage.setItem(this.tokenKey, JSON.stringify(tokenData));
-    } catch (e) {
-      console.error('Hiba a token mentésekor:', e);
-    }
-  }
+   _decodeJwtPayload(token) {
+     try {
+       const base64Url = token.split('.')[1]; // Payload rész
+       if (!base64Url) return null;
+       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+       const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+       }).join(''));
+       return JSON.parse(jsonPayload);
+     } catch (error) {
+       console.error("[AuthTokenService] Hiba a JWT payload dekódolása közben:", error);
+       return null;
+     }
+   }
 }
 
-// Globális példány létrehozása, hogy az alkalmazás más részeiből is elérhető legyen
+// Globális példány létrehozása
 window.authTokenService = new AuthTokenService();
