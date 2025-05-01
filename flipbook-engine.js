@@ -499,21 +499,19 @@ class FlipbookEngine {
         
         const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
         
-        // Bal gomb frissítése (hátra lapozás)
-        if (this.leftButton) {
-            // Csak a 0-ik oldalon (borítón) rejtjük el
-            if (this.currentPage <= 0) {
-                // Borítón elrejtjük a bal gombot
-                this.leftButton.style.opacity = '0';
-                this.leftButton.style.pointerEvents = 'none';
-                console.log('Bal gomb elrejtve - borítólapon vagyunk');
-            } else {
-                // Minden más oldalon megjelenítjük
-                this.leftButton.style.opacity = '1';
-                this.leftButton.style.pointerEvents = 'auto';
-                console.log('Bal gomb megjelenítve');
-            }
+       // Bal gomb frissítése (hátra lapozás) - VISSZAÁLLÍTVA AZ EREDETI LOGIKÁRA
+    if (this.leftButton) {
+        if (this.currentPage <= 0 || this.currentPage >= 2) { // Visszaállítva az eredeti feltétel
+            this.leftButton.style.opacity = '0';
+            this.leftButton.style.pointerEvents = 'none';
+            console.log('Bal gomb elrejtve');
         }
+        else {
+            this.leftButton.style.opacity = '1';
+            this.leftButton.style.pointerEvents = 'auto';
+            console.log('Bal gomb megjelenítve');
+        }
+    }
         
         // Jobb gomb frissítése (előre lapozás)
         if (this.rightButton) {
