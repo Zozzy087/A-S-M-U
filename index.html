@@ -196,23 +196,67 @@
     });
   </script>
   
-  <!-- === INSTALL PROMPT HANDLER === -->
-  <script>
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('install-banner').style.display = 'block';
-    });
+  // === INSTALL PROMPT HANDLER (MÓDOSÍTOTT) ===
+<script>
+  let deferredPrompt;
 
-    document.getElementById('install-banner')
-      .addEventListener('click', async () => {
-        const banner = document.getElementById('install-banner');
-        banner.style.display = 'none';
-        await deferredPrompt.prompt();
-        deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Ellenőrizzük, hogy nem fut-e már standalone módban (telepítve)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      console.log('PWA már standalone módban fut, telepítési banner nem jelenik meg.');
+      return; // Ha már telepítve van, ne csináljunk semmit
+    }
+
+    // Ha nincs telepítve, megakadályozzuk az alapértelmezett mini-infobart
+    e.preventDefault();
+    // Elmentjük az eseményt, hogy később tudjuk használni
+    deferredPrompt = e;
+    console.log('`beforeinstallprompt` esemény elkapva, banner megjelenítve.');
+    // Megjelenítjük a saját telepítési sávunkat
+    const installBanner = document.getElementById('install-banner');
+    if (installBanner) {
+        installBanner.style.display = 'block';
+    }
+
+    // Opcionális: Figyeljük a telepítés eredményét
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('Felhasználó elfogadta a telepítési promptot');
+      } else {
+        console.log('Felhasználó elutasította a telepítési promptot');
+      }
+      deferredPrompt = null; // A prompt csak egyszer használható
+    });
+  });
+
+  // Eseménykezelő a saját bannerünkre kattintáshoz
+  const installBannerButton = document.getElementById('install-banner');
+  if (installBannerButton) {
+      installBannerButton.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+            console.log('Nincs elmentett telepítési prompt.');
+            return; // Ha nincs elmentett prompt, nem tudunk mit tenni
+        }
+        // Elrejtjük a saját bannerünket
+        installBannerButton.style.display = 'none';
+        // Megjelenítjük a böngésző telepítési párbeszédablakát
+        deferredPrompt.prompt();
+        // Az eredményt a fenti userChoice listener kezeli
       });
-  </script>
+  }
+
+   // Figyeljük, ha az appot telepítették, hogy elrejtsük a bannert
+   window.addEventListener('appinstalled', () => {
+     console.log('PWA telepítve!');
+     const installBanner = document.getElementById('install-banner');
+     if (installBanner) {
+         installBanner.style.display = 'none';
+     }
+     // Töröljük a deferredPrompt-ot is, ha még megvolt
+     deferredPrompt = null;
+   });
+
+</script>
   
   <script>
   if ('serviceWorker' in navigator) {
