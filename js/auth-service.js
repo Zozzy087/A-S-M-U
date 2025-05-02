@@ -314,15 +314,6 @@ class AuthService {
         }
 
         // --- > MÓDOSÍTÁS KEZDETE < ---
-        // Mentsük el a kódot a localStorage-ba a vízjelhez
-        try {
-          localStorage.setItem('activation_code', code);
-          console.log('[AuthService] Aktivációs kód sikeresen mentve localStorage-ba:', code);
-        } catch (storageError) {
-          console.warn('[AuthService] Hiba az aktivációs kód localStorage-ba mentése során:', storageError);
-        }
-        // --- > MÓDOSÍTÁS VÉGE < ---
-
         // A sikeres Firestore művelet (vagy ha az eszköz már listán volt) UTÁN
         // kérünk egy biztonságos tokent a szervertől.
         console.log('[AuthService] Firestore művelet sikeres, biztonságos token lekérése...');
@@ -349,6 +340,7 @@ class AuthService {
           // Dobjunk hibát, mert ez kritikus? Vagy csak jelezzük?
           // throw new Error("Belső hiba: Token szolgáltatás nem elérhető.");
         }
+        // --- > MÓDOSÍTÁS VÉGE < ---
 
         return true; // Visszatérünk a sikeres aktiválással/eszköz hozzáadással
 
