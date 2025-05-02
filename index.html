@@ -290,19 +290,20 @@
       const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
       if (isInStandaloneMode) {
         console.log('[InstallPrompt] Az app telepített (standalone) módban fut, banner nem jelenik meg.');
-        // Ha telepítve fut, elrejtjük a bannert, ha esetleg látható lenne
-         const installBanner = document.getElementById('install-banner');
-         if (installBanner) {
+        const installBanner = document.getElementById('install-banner');
+        if (installBanner) {
              installBanner.style.display = 'none';
-         }
+        }
         return; // Kilépünk, nem kell bannert mutatni
       }
 
-      // 3. Ellenőrizzük, hogy ebben a munkamenetben már megmutattuk-e a bannert
-      if (sessionStorage.getItem('installBannerShown')) {
-        console.log('[InstallPrompt] A banner már megjelent ebben a munkamenetben, nem jelenítjük meg újra.');
-        return; // Kilépünk, nem mutatjuk meg újra
+      // === MÓDOSÍTÁS KEZDETE: localStorage használata ===
+      // 3. Ellenőrizzük, hogy a felhasználó látta-e már a bannert (localStorage alapján)
+      if (localStorage.getItem('installBannerShown')) {
+          console.log('[InstallPrompt] A banner már megjelent korábban (localStorage), nem jelenítjük meg újra.');
+          return; // Kilépünk, nem mutatjuk meg újra
       }
+      // === MÓDOSÍTÁS VÉGE ===
 
       // 4. Ha nem telepített módban fut és még nem mutattuk meg -> Eltároljuk az eseményt későbbre
       console.log('[InstallPrompt] Telepítési prompt eltárolva.');
@@ -313,14 +314,20 @@
       if (installBanner) {
         console.log('[InstallPrompt] Telepítési banner megjelenítése.');
         installBanner.style.display = 'block';
-        // Beállítunk egy jelzőt a sessionStorage-ben, hogy tudjuk, már megmutattuk
-        sessionStorage.setItem('installBannerShown', 'true');
+
+        // === MÓDOSÍTÁS KEZDETE: localStorage használata ===
+        // Beállítunk egy jelzőt a localStorage-ben, hogy tudjuk, már megmutattuk
+        // Ezt akkor is beállítjuk, ha a user csak meglátja, nem csak ha rákattint.
+        // Így frissítés után sem jön elő újra.
+        localStorage.setItem('installBannerShown', 'true');
+        // === MÓDOSÍTÁS VÉGE ===
+
       } else {
          console.error('[InstallPrompt] Az "install-banner" elem nem található!');
       }
     });
 
-    // Bannerre kattintás kezelése
+    // Bannerre kattintás kezelése (ez a rész maradhat változatlan)
     const bannerElement = document.getElementById('install-banner');
     if (bannerElement) {
       bannerElement.addEventListener('click', async () => {
