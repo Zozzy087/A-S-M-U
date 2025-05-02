@@ -4,177 +4,132 @@
  */
 class FlipbookEngine {
     constructor(options) {
-        this.currentPageElement = null; // Az aktuális oldalt megjelenítő iframe
-        this.nextPageElement = null; // A következő oldal előtöltéséhez (animációhoz) használt iframe (opcionális)
-        this.isAnimating = false; // Jelzi, ha lapozási animáció fut
-        this.isMuted = false; // Hang némítás állapota
-        this.leftButton = null; // Balra lapozó gomb DOM elem
-        this.rightButton = null; // Jobbra lapozó gomb DOM elem
-        this.currentPage = 0; // Az aktuálisan megjelenített oldal SZÁMA (vagy 'borito') - a renderPage frissíti
-        this.flipSound = null; // Hang objektum
+        this.currentPageElement = null;
+        this.nextPageElement = null;
+        // Állapot változók
+        this.currentPage = 0; // Ezt az _activatePage frissíti
+        // this.totalPages = 300; // Erre már nem feltétlenül van szükség itt
+        this.isAnimating = false;
+        this.isMuted = false;
+        // Navigáció vezérlők
+        this.leftButton = null;
+        this.rightButton = null;
+        // Fejezet adatok (Ezeket most már nem itt használjuk a fő navigációhoz)
+        this.chapters = [
+            { id: "0", title: "Borító", page: 0 },
+            { id: "1", title: "Kezdés", page: 1 },
+            { id: "2", title: "Karakteralkotás", page: 2 }
+        ];
+        // Segédfüggvény a keydown eseménykezelő referenciájához (marad)
+        this.handleKeyDown = (e) => {
+            // Ne lapozzunk, ha az aktivációs UI látható
+            if (document.getElementById('activation-container')) return;
+            if (e.key === 'ArrowLeft') {
+                this.prevPage();
+            } else if (e.key === 'ArrowRight') {
+                this.nextPage();
+            }
+            // A fullscreen ('f') kezelése maradhat itt vagy az index.html-ben
+        };
 
-        // --- ÚJ: Renderelési callback referencia ---
-        // A ContentLoadernek átadandó függvény, ami tudja, hogyan kell renderelni
-        this.renderPageCallback = this.renderPage.bind(this);
+        // === FONTOS VÁLTOZÁS: this.totalPages eltávolítva innen ===
+        // this.totalPages = options.totalPages; // Nincs már rá szükség itt
 
-        // Inicializálás az opciókkal
         const container = document.getElementById(options.containerId);
         if (!container) throw new Error(`Container element with ID "${options.containerId}" not found`);
         this.bookContainer = container;
 
-        this.initializeContainer(); // Csak létrehozza az iframe-eket, src nélkül
+        this.initializeContainer(); // Létrehozza az üres iframe-eket
 
-        if (options.soundPath) {
-            this.flipSound = new Audio(options.soundPath);
-            this.flipSound.preload = 'auto';
+        // Lapozó hang inicializálása (marad)
+        this.flipSound = new Audio(options.soundPath || 'sounds/pageturn.mp3');
+        this.flipSound.preload = 'auto';
+
+        this.createControls(); // Létrehozza a gombokat
+        this.addEventListeners(); // Hozzáadja az eseményfigyelőket (módosított prev/next)
+
+        // === FONTOS VÁLTOZÁS: Kezdőoldal betöltés eltávolítva innen ===
+        // A kezdőoldal betöltését most az index.html intézi a hash alapján
+        // this.loadPage(0);
+        // this.updateNavigationVisibility(); // Ezt az _activatePage fogja kezelni
+
+        // === ContentLoader setup hívás MÓDOSÍTVA ===
+        // Most az _renderPage metódust adjuk át callback-ként
+        if (window.contentLoader) {
+          window.contentLoader.setup(this._renderPage.bind(this)); // Az _renderPage lesz a callback
+           console.log("FlipbookEngine: ContentLoader setup sikeresen meghívva.");
         } else {
-             console.warn("FlipbookEngine: Nincs megadva hangfájl útvonal (soundPath).");
+           console.error("FlipbookEngine: ContentLoader nem található a setup hívásakor!");
         }
 
-        this.createControls(); // Vezérlők létrehozása (marad ugyanaz)
-        this.addEventListeners(); // Eseményfigyelők hozzáadása (lapozó gombok módosulnak)
-
-        // TotalPages és Chapters itt már talán nem szükséges, ha a navigáció a hash-re épül
-        // this.totalPages = options.totalPages;
-        // this.chapters = options.chapters || []; // Ha lenne fejezetlista
-
-        // Kezdeti navigációs gombok beállítása (az induló hash alapján kellene)
-        // Ezt most a renderPage fogja kezelni, miután az első oldal betöltődött
-        // this.updateNavigationVisibility();
-
-        // --- ContentLoader beállítása a callback-kel ---
-        // Ezt most az index.html végzi, miután az engine inicializálódott
-        // if (window.contentLoader) {
-        //   window.contentLoader.setup(this.renderPageCallback);
-        // } else {
-        //    console.error("FlipbookEngine: ContentLoader nem található a setup hívásakor!");
-        // }
-
+        // Auth token service ellenőrzése (marad)
+        if (window.authTokenService) {
+          window.authTokenService.getAccessToken();
+        }
         console.log("FlipbookEngine konstruktor befejeződött.");
     }
 
     /**
-     * Flipbook konténer és iframe elemek létrehozása (src nélkül)
+     * Flipbook konténer inicializálása (Változatlan, de src nélkül)
      */
     initializeContainer() {
-        this.bookContainer.innerHTML = ''; // Tiszta konténer
+        this.bookContainer.innerHTML = '';
         this.bookContainer.style.position = 'relative';
         this.bookContainer.style.width = '100%';
         this.bookContainer.style.height = '100%';
         this.bookContainer.style.overflow = 'hidden';
         this.bookContainer.classList.add('flipbook-container');
-
-        // Aktuális oldal iframe létrehozása
+        // Aktuális oldal iframe
         this.currentPageElement = document.createElement('iframe');
         this.currentPageElement.className = 'book-page current';
-        this.currentPageElement.style.width = '100%';
-        this.currentPageElement.style.height = '100%';
-        this.currentPageElement.style.border = 'none';
-        this.currentPageElement.style.position = 'absolute';
-        this.currentPageElement.style.left = '0';
-        this.currentPageElement.style.top = '0';
-        this.currentPageElement.style.zIndex = '1';
-        // Fontos: Kezdetben ne legyen src beállítva! A tartalom JS-ből jön.
-        // this.currentPageElement.src = 'about:blank'; // Vagy hagyjuk üresen
+        // ... (iframe stílusok maradnak) ...
+        this.currentPageElement.style.width = '100%'; this.currentPageElement.style.height = '100%'; this.currentPageElement.style.border = 'none'; this.currentPageElement.style.position = 'absolute'; this.currentPageElement.style.left = '0'; this.currentPageElement.style.top = '0'; this.currentPageElement.style.zIndex = '1';
+        this.currentPageElement.setAttribute('sandbox', 'allow-scripts allow-same-origin'); // Sandbox fontos lehet
+        // NINCS SRC BEÁLLÍTÁS!
         this.bookContainer.appendChild(this.currentPageElement);
 
-        // Következő oldal iframe létrehozása (animációhoz, ha kell)
-        // Ennek a kezelése bonyolultabb lesz src nélkül, lehet egyszerűsíteni
+        // Következő oldal iframe (animációhoz)
         this.nextPageElement = document.createElement('iframe');
         this.nextPageElement.className = 'book-page next';
-        this.nextPageElement.style.cssText = this.currentPageElement.style.cssText; // Stílus másolása
+        this.nextPageElement.style.cssText = this.currentPageElement.style.cssText;
         this.nextPageElement.style.zIndex = '0';
         this.nextPageElement.style.visibility = 'hidden';
+         this.nextPageElement.setAttribute('sandbox', 'allow-scripts allow-same-origin');
         this.bookContainer.appendChild(this.nextPageElement);
-
-        console.log("FlipbookEngine: iframe-ek inicializálva.");
+        console.log("FlipbookEngine: iframe-ek inicializálva (src nélkül).");
     }
 
     /**
      * Navigációs és funkció vezérlők létrehozása (Változatlan)
      */
-    createControls() {
-        // Balra lapozó gomb (marad ugyanaz)
-        this.leftButton = document.createElement('div');
-        this.leftButton.className = 'page-turn-button left';
-        // ... (ugyanazok a stílusok, mint korábban) ...
-         this.leftButton.innerHTML = '◀';
-         this.leftButton.style.position = 'absolute'; this.leftButton.style.left = '20px'; this.leftButton.style.top = '50%'; this.leftButton.style.transform = 'translateY(-50%)'; this.leftButton.style.fontSize = '36px'; this.leftButton.style.color = 'rgba(199, 0, 0, 1)'; this.leftButton.style.cursor = 'pointer'; this.leftButton.style.zIndex = '100'; this.leftButton.style.backgroundColor = 'rgba(0, 0, 0, 0.3)'; this.leftButton.style.borderRadius = '50%'; this.leftButton.style.width = '50px'; this.leftButton.style.height = '50px'; this.leftButton.style.display = 'flex'; this.leftButton.style.justifyContent = 'center'; this.leftButton.style.alignItems = 'center'; this.leftButton.style.transition = 'opacity 0.3s ease';
-        this.bookContainer.appendChild(this.leftButton);
-
-        // Jobbra lapozó gomb (marad ugyanaz)
-        this.rightButton = document.createElement('div');
-        this.rightButton.className = 'page-turn-button right';
-        // ... (ugyanazok a stílusok, mint korábban) ...
-        this.rightButton.innerHTML = '▶';
-        this.rightButton.style.position = 'absolute'; this.rightButton.style.right = '20px'; this.rightButton.style.top = '50%'; this.rightButton.style.transform = 'translateY(-50%)'; this.rightButton.style.fontSize = '36px'; this.rightButton.style.color = 'rgba(0, 199, 0, 1)'; this.rightButton.style.cursor = 'pointer'; this.rightButton.style.zIndex = '100'; this.rightButton.style.backgroundColor = 'rgba(0, 0, 0, 0.3)'; this.rightButton.style.borderRadius = '50%'; this.rightButton.style.width = '50px'; this.rightButton.style.height = '50px'; this.rightButton.style.display = 'flex'; this.rightButton.style.justifyContent = 'center'; this.rightButton.style.alignItems = 'center'; this.rightButton.style.transition = 'opacity 0.3s ease';
-        this.bookContainer.appendChild(this.rightButton);
-
-        // Alsó vezérlők konténere (marad ugyanaz)
-        const controlsContainer = document.createElement('div');
-        controlsContainer.className = 'controls-container';
-        // ... (stílusok maradnak) ...
-        controlsContainer.style.position = 'fixed'; controlsContainer.style.bottom = '0'; controlsContainer.style.left = '0'; controlsContainer.style.width = '100%'; controlsContainer.style.zIndex = '9999'; controlsContainer.style.display = 'flex'; controlsContainer.style.justifyContent = 'center'; /* Változtatva: Gombok középre */ controlsContainer.style.gap = '15px'; controlsContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.3)'; controlsContainer.style.padding = '8px 0';
-
-        // Navigáció gomb (marad ugyanaz)
-        const navButton = document.createElement('button');
-        navButton.className = 'control-button navigation';
-        navButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
-        navButton.title = 'Navigáció';
-        navButton.addEventListener('click', () => this.showNavigationMenu()); // showNavigationMenu logikája maradhat
-
-        // Teljes képernyő gomb (marad ugyanaz)
-        const fullscreenButton = document.createElement('button');
-        fullscreenButton.className = 'control-button fullscreen';
-        fullscreenButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`;
-        fullscreenButton.title = 'Teljes képernyő';
-        fullscreenButton.addEventListener('click', () => this.toggleFullscreen()); // Ez a logika maradhat
-
-        // Némítás gomb (marad ugyanaz)
-        const muteButton = document.createElement('button');
-        muteButton.className = 'control-button mute';
-        muteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
-        muteButton.title = 'Hang némítása';
-        // Kezdeti állapot beállítása (ha kell)
-        this.updateMuteButtonIcon(muteButton);
-        muteButton.addEventListener('click', () => this.toggleMute(muteButton)); // Ez a logika maradhat
-
-        controlsContainer.appendChild(navButton);
-        controlsContainer.appendChild(fullscreenButton);
-        controlsContainer.appendChild(muteButton);
-        document.body.appendChild(controlsContainer); // Inkább a body-hoz adjuk, ne a book containerhez
+    createControls() { /* ... (A teljes createControls kód változatlan marad) ... */
+        this.leftButton = document.createElement('div'); this.leftButton.className = 'page-turn-button left'; this.leftButton.innerHTML = '◀'; this.leftButton.style.cssText = "position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 36px; color: rgba(199, 0, 0, 1); cursor: pointer; z-index: 100; background-color: rgba(0, 0, 0, 0.3); border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; transition: opacity 0.3s ease;"; this.bookContainer.appendChild(this.leftButton);
+        this.rightButton = document.createElement('div'); this.rightButton.className = 'page-turn-button right'; this.rightButton.innerHTML = '▶'; this.rightButton.style.cssText = "position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 36px; color: rgba(0, 199, 0, 1); cursor: pointer; z-index: 100; background-color: rgba(0, 0, 0, 0.3); border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; transition: opacity 0.3s ease;"; this.bookContainer.appendChild(this.rightButton);
+        const controlsContainer = document.createElement('div'); controlsContainer.className = 'controls-container'; controlsContainer.style.cssText = "position: fixed; bottom: 0px; left: 0px; width: 100%; z-index: 9999; display: flex; justify-content: center; gap: 15px; background-color: rgba(0, 0, 0, 0.3); padding: 8px 0px;";
+        const navButton = document.createElement('button'); navButton.className = 'control-button navigation'; navButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`; navButton.title = 'Navigáció'; navButton.addEventListener('click', () => this.showNavigationMenu());
+        const fullscreenButton = document.createElement('button'); fullscreenButton.className = 'control-button fullscreen'; fullscreenButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`; fullscreenButton.title = 'Teljes képernyő'; fullscreenButton.addEventListener('click', () => this.toggleFullscreen());
+        const muteButton = document.createElement('button'); muteButton.className = 'control-button mute'; muteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`; muteButton.title = 'Hang némítása'; muteButton.addEventListener('click', () => this.toggleMute(muteButton));
+        controlsContainer.appendChild(navButton); controlsContainer.appendChild(fullscreenButton); controlsContainer.appendChild(muteButton); document.body.appendChild(controlsContainer);
         console.log("FlipbookEngine: Vezérlők létrehozva.");
-    }
+     }
 
     /**
-     * Eseményfigyelők hozzáadása
+     * Eseményfigyelők hozzáadása (MÓDOSÍTVA: prev/nextPage hívás marad, de azok mást csinálnak)
      */
     addEventListeners() {
-        // Nyíl gombok eseménykezelői (mostantól hash-t váltanak)
         if (this.leftButton) {
-            this.leftButton.addEventListener('click', () => this.prevPage());
+            this.leftButton.addEventListener('click', () => this.prevPage()); // prevPage most hash-t vált
         }
         if (this.rightButton) {
-            this.rightButton.addEventListener('click', () => this.nextPage());
+            this.rightButton.addEventListener('click', () => this.nextPage()); // nextPage most hash-t vált
         }
+        document.addEventListener('keydown', this.handleKeyDown); // Billentyűzet figyelő
 
-        // Billentyűzet események (marad ugyanaz)
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') this.prevPage();
-            else if (e.key === 'ArrowRight') this.nextPage();
-            else if (e.key === 'f' || e.key === 'F') this.toggleFullscreen();
-        });
-
-        // Érintés események (swipe) - Maradhat ugyanaz, a prev/nextPage hívás miatt
+        // Swipe figyelő (marad, mert a prev/nextPage-et hívja)
         let touchStartX = 0;
         let touchEndX = 0;
-        this.bookContainer.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, { passive: true });
-        this.bookContainer.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            this.handleSwipe(touchStartX, touchEndX);
-        }, { passive: true });
+        this.bookContainer.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+        this.bookContainer.addEventListener('touchend', (e) => { touchEndX = e.changedTouches[0].screenX; this.handleSwipe(touchStartX, touchEndX); }, { passive: true });
 
         console.log("FlipbookEngine: Eseményfigyelők hozzáadva.");
     }
@@ -182,176 +137,178 @@ class FlipbookEngine {
     /**
      * Swipe kezelése (Változatlan)
      */
-    handleSwipe(startX, endX) {
-        const swipeThreshold = 50; // Minimum swipe távolság pixelben
-        if (this.isAnimating) return; // Ne engedjünk swipe-ot animáció közben
-
-        if (endX < startX - swipeThreshold) {
-            this.nextPage(); // Jobbra swipe
-        } else if (endX > startX + swipeThreshold) {
-            this.prevPage(); // Balra swipe
-        }
+    handleSwipe(startX, endX) { /* ... (Marad ugyanaz) ... */
+        const swipeThreshold = 50; if (this.isAnimating) return;
+        if (endX < startX - swipeThreshold) this.nextPage();
+        else if (endX > startX + swipeThreshold) this.prevPage();
     }
 
-
-    // ==============================================================
-    // ==       MÓDOSÍTOTT ÉS ÚJ FÜGGVÉNYEK AZ ÚJ LOGIKÁHOZ      ==
-    // ==============================================================
+    // === RÉGI OLDALBETÖLTŐ FÜGGVÉNYEK TÖRÖLVE ===
+    // _originalLoadPage() törölve
+    // loadPage() törölve (mostantól a contentLoader intézi a hash alapján)
+    // flipPageAnimation() törölve (az egyszerűség kedvéért most nincs animáció)
 
     /**
-     * Callback függvény a ContentLoader számára.
-     * Megjeleníti a kapott HTML tartalmat az aktuális iframe-ben.
-     * @param {string} pageId Az oldal azonosítója (pl. "1", "borito")
-     * @param {string} htmlContent A megjelenítendő HTML tartalom (már tartalmazza a licenc infót)
+     * Callback: Tartalom megjelenítése az iframe-ben (ÚJ LOGIKA)
+     * Ezt a metódust hívja meg a contentLoader, miután sikeresen betöltötte és
+     * kiegészítette a HTML tartalmat a licenc infóval.
+     * @param {string} pageId Az oldal azonosítója
+     * @param {string} htmlContent A teljes HTML tartalom (már ID-vel együtt)
      */
-    renderPage(pageId, htmlContent) {
+    _renderPage(pageId, htmlContent) {
+        console.log(`[FlipbookEngine] _renderPage meghívva: ${pageId}`);
         if (!this.currentPageElement) {
             console.error("FlipbookEngine: Nincs aktuális iframe elem a rendereléshez!");
             return;
         }
-        console.log(`[FlipbookEngine] Oldal renderelése: ${pageId}`);
 
-        // Egyszerű tartalom beírás, animáció nélkül egyelőre
-        // Ha animációt szeretnél, itt kellene bonyolítani a nextPageElement használatával
+        // Egyszerű tartalom beírás az AKTUÁLIS iframe-be
+        // Nincs animáció, nincs nextFrame használat ebben a verzióban
         try {
             const iframe = this.currentPageElement;
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            // Fontos: Biztosítjuk, hogy az iframe ne a régi src alapján akarjon betölteni
+            if (iframe.src !== 'about:blank') iframe.src = 'about:blank';
 
-            if (iframeDoc) {
-                iframeDoc.open();
-                iframeDoc.write(htmlContent);
-                iframeDoc.close();
-                console.log(`[FlipbookEngine] Tartalom sikeresen beírva az iframe-be (${pageId}).`);
+            // Várakozás, amíg az about:blank betöltődik (apró késleltetés)
+            setTimeout(() => {
+                try {
+                     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                     if (iframeDoc) {
+                         iframeDoc.open();
+                         iframeDoc.write(htmlContent); // Beírjuk a kapott tartalmat
+                         iframeDoc.close();
+                         console.log(`[FlipbookEngine] Tartalom sikeresen beírva az iframe-be (${pageId}).`);
 
-                // Scroll to top of the iframe content after loading
-                if (iframe.contentWindow) {
-                    iframe.contentWindow.scrollTo(0, 0);
+                         // Scroll a tetejére
+                         iframe.contentWindow?.scrollTo(0, 0);
+
+                         // Globális goToPage elérhetővé tétele az iframe számára
+                         if (iframe.contentWindow) {
+                            iframe.contentWindow.parentGoToPage = window.goToPage;
+                         }
+                         // Biztonsági beállítások alkalmazása
+                         this._applyIframeSecurity(iframe);
+
+                         // Aktiváljuk az oldalt (frissítjük a belső állapotot és gombokat)
+                         this._activatePage(pageId);
+
+                     } else {
+                         console.error("[FlipbookEngine] Nem sikerült elérni az iframe dokumentumát a rendereléshez (időzítés után).");
+                         this._activatePage(pageId); // Próbáljuk meg aktiválni a gombokat akkor is
+                     }
+                } catch (writeError) {
+                     console.error(`[FlipbookEngine] Hiba az iframe tartalmának beírásakor (${pageId}) (időzítés után):`, writeError);
+                     this._activatePage(pageId); // Próbáljuk meg aktiválni a gombokat akkor is
                 }
+            }, 50); // Rövid várakozás az about:blank betöltésére
 
-                 // Itt lehetne újraalkalmazni az iframe biztonsági beállításokat, ha szükséges
-                 // this._applyIframeSecurity(iframe);
-
-                 // Globális goToPage elérhetővé tétele az iframe-en belülről
-                 // (Biztonsági megfontolásból jobb lehetne postMessage-et használni)
-                 if (iframe.contentWindow) {
-                     iframe.contentWindow.parentGoToPage = window.goToPage;
-                     // Régi goToPage direkt hívás eltávolítása, ha volt ilyen
-                     if(iframe.contentWindow.goToPage) iframe.contentWindow.goToPage = undefined;
-                 }
-
-
-            } else {
-                console.error("[FlipbookEngine] Nem sikerült elérni az iframe dokumentumát a rendereléshez.");
-            }
         } catch (e) {
-            console.error(`[FlipbookEngine] Hiba az iframe tartalmának beírásakor (${pageId}):`, e);
-            // Hibaoldal megjelenítése az iframe-ben
-             const errorHtml = `<h1>Renderelési Hiba</h1><p>Az oldal (${pageId}) tartalmának megjelenítése sikertelen.</p><p>${e.message}</p>`;
-             try {
-                  const iframeDoc = this.currentPageElement.contentDocument || this.currentPageElement.contentWindow?.document;
-                  if (iframeDoc) { iframeDoc.open(); iframeDoc.write(errorHtml); iframeDoc.close(); }
-             } catch (renderError) {}
+            console.error(`[FlipbookEngine] Hiba az iframe előkészítésekor (${pageId}):`, e);
+             this._activatePage(pageId); // Próbáljuk meg aktiválni a gombokat akkor is
         }
-
-        // Frissítjük a belső állapotot és a gombokat
-        this.currentPage = pageId === 'borito' ? 0 : parseInt(pageId, 10);
-        this.updateNavigationVisibility(); // Navigációs gombok állapotának frissítése
     }
 
 
     /**
-     * Előző oldalra "lapozás" (Hash változtatása)
+     * Előző oldalra "lapozás" (Hash változtatása) - MÓDOSÍTVA
      */
     prevPage() {
-        if (this.isAnimating) return; // Animáció alatt ne engedjünk lapozni
+        if (this.isAnimating) return;
+        // Az aktuális oldal számát a belső változóból vesszük (amit az _activatePage frissít)
+        const currentPageNum = (typeof this.currentPage === 'number') ? this.currentPage : this.getCurrentPageNumberFromHash();
 
-        // Az aktuális oldal számát a hash-ből vagy a belső változóból vesszük
-        let currentPageNum = this.getCurrentPageNumberFromHash();
-        if (isNaN(currentPageNum)) currentPageNum = this.currentPage; // Fallback a belsőre
+        if (isNaN(currentPageNum)) {
+             console.warn("[FlipbookEngine] prevPage: Nem sikerült meghatározni az aktuális oldalszámot.");
+             return;
+        }
 
         const targetPageNum = currentPageNum - 1;
 
-        // Ellenőrizzük, hogy van-e ilyen oldal (0 a minimum, borító speciális)
         if (targetPageNum >= 0) {
-             // Ha a cél a 0, akkor a hash 'borito' legyen (vagy '0', ha úgy kezeled)
-             const targetPageId = targetPageNum === 0 ? 'borito' : String(targetPageNum);
-             console.log(`[FlipbookEngine] prevPage: Ugrás a ${targetPageId} oldalra (hash beállítása).`);
-             location.hash = `#${targetPageId}`;
-             this.playFlipSound(); // Hang lejátszása
+            const targetPageId = targetPageNum === 0 ? 'borito' : String(targetPageNum);
+            // Ellenőrizzük, létezik-e a céloldal
+             if (window.bookPageData && window.bookPageData.hasOwnProperty(targetPageId)) {
+                 console.log(`[FlipbookEngine] prevPage: Ugrás a ${targetPageId} oldalra (hash beállítása).`);
+                 this.playFlipSound(); // Hang lejátszása a hash váltás ELŐTT
+                 location.hash = `#${targetPageId}`;
+             } else {
+                  console.log(`[FlipbookEngine] prevPage: A(z) ${targetPageId} oldal nem létezik a bookPageData-ban.`);
+                  this.showNotification(`A(z) ${targetPageId}. oldal nem elérhető.`); // Értesítés
+             }
         } else {
             console.log("[FlipbookEngine] prevPage: Már az első oldalon vagyunk.");
         }
     }
 
     /**
-     * Következő oldalra "lapozás" (Hash változtatása)
+     * Következő oldalra "lapozás" (Hash változtatása) - MÓDOSÍTVA
      */
     nextPage() {
         if (this.isAnimating) return;
+         const currentPageNum = (typeof this.currentPage === 'number') ? this.currentPage : this.getCurrentPageNumberFromHash();
 
-        let currentPageNum = this.getCurrentPageNumberFromHash();
-        if (isNaN(currentPageNum)) currentPageNum = this.currentPage;
+         if (isNaN(currentPageNum)) {
+             console.warn("[FlipbookEngine] nextPage: Nem sikerült meghatározni az aktuális oldalszámot.");
+             return;
+         }
 
-        const targetPageNum = (currentPageNum === 0) ? 1 : currentPageNum + 1; // Borítóról (0) az 1-re
+        const targetPageNum = (currentPageNum === 0) ? 1 : currentPageNum + 1;
+        const targetPageId = String(targetPageNum);
 
-        // Ellenőrizzük, hogy létezik-e a céloldal a betöltött adatokban
-        // (Nem a totalPages alapján, hanem a bookPageData alapján)
-        if (window.bookPageData && window.bookPageData.hasOwnProperty(String(targetPageNum))) {
-            console.log(`[FlipbookEngine] nextPage: Ugrás a ${targetPageNum} oldalra (hash beállítása).`);
-            location.hash = `#${targetPageNum}`;
-            this.playFlipSound(); // Hang lejátszása
+        if (window.bookPageData && window.bookPageData.hasOwnProperty(targetPageId)) {
+            console.log(`[FlipbookEngine] nextPage: Ugrás a ${targetPageId} oldalra (hash beállítása).`);
+             this.playFlipSound(); // Hang lejátszása a hash váltás ELŐTT
+            location.hash = `#${targetPageId}`;
         } else {
-            console.log(`[FlipbookEngine] nextPage: Nincs több oldal, vagy a ${targetPageNum} nem létezik a bookPageData-ban.`);
-            // Itt lehetne egy üzenet a felhasználónak, hogy vége a könyvnek
-            // this.showNotification("A könyv végére értél.");
+            console.log(`[FlipbookEngine] nextPage: Nincs több oldal, vagy a ${targetPageId} nem létezik a bookPageData-ban.`);
+            this.showNotification("A könyv végére értél, vagy a következő oldal nem található."); // Értesítés
         }
     }
 
-     /**
-     * Segédfüggvény az aktuális oldalszám kinyerésére a hash-ből
-     * @returns {number} Az oldalszám, vagy NaN, ha nem szám vagy 'borito'
+    /**
+     * Segédfüggvény az aktuális oldalszám kinyerésére a hash-ből (Változatlan)
      */
      getCurrentPageNumberFromHash() {
         const hash = location.hash.substring(1);
         if (hash === 'borito') return 0;
-        return parseInt(hash, 10);
+        const pageNum = parseInt(hash, 10);
+        // Visszaadjuk a számot, vagy 0-t ha 'borito', egyébként NaN-t
+        return hash === 'borito' ? 0 : pageNum;
     }
 
-    /**
-     * Lapozás hang lejátszása (ha nincs némítva)
+     /**
+     * Lapozás hang lejátszása (Változatlan)
      */
-    playFlipSound() {
-        if (this.flipSound && !this.isMuted) {
-            this.flipSound.currentTime = 0;
-            this.flipSound.play().catch(e => console.warn('Hang lejátszási hiba:', e));
-        }
-    }
+     playFlipSound() { /* ... (Marad ugyanaz) ... */
+        if (this.flipSound && !this.isMuted) { this.flipSound.currentTime = 0; this.flipSound.play().catch(e => console.warn('Hang lejátszási hiba:', e)); }
+     }
 
 
     /**
-     * Navigációs gombok láthatóságának frissítése
-     * Most már a hash vagy a belső currentPage alapján kell döntenie.
+     * Navigációs gombok láthatóságának frissítése (MÓDOSÍTVA: A bookPageData alapján)
      */
     updateNavigationVisibility() {
-        // Az aktuális oldalszámot használjuk (amit a renderPage frissít)
-        const currentPageNum = this.currentPage; // Ez már szám vagy 0 (borito)
-        console.log(`[FlipbookEngine] updateNavigationVisibility - Aktuális oldal (belső): ${currentPageNum}`);
+        const currentPageNum = this.currentPage; // Ezt az _activatePage frissíti
+        if (currentPageNum === null || typeof currentPageNum === 'undefined') return; // Ha még nincs beállítva
 
-        // Bal gomb: Akkor látszik, ha nem a borítón (0) vagyunk
+        // Bal gomb: Akkor látszik, ha az aktuális oldal NEM a borító (0) ÉS LÉTEZIK az előző oldal
         if (this.leftButton) {
-            if (currentPageNum <= 0) { // 0 vagy annál kisebb (elvileg csak 0 lehet)
-                this.leftButton.style.opacity = '0';
-                this.leftButton.style.pointerEvents = 'none';
-            } else {
+            const prevPageNum = currentPageNum - 1;
+            const prevPageId = prevPageNum === 0 ? 'borito' : String(prevPageNum);
+            if (currentPageNum > 0 && window.bookPageData?.hasOwnProperty(prevPageId)) {
                 this.leftButton.style.opacity = '1';
                 this.leftButton.style.pointerEvents = 'auto';
+            } else {
+                this.leftButton.style.opacity = '0';
+                this.leftButton.style.pointerEvents = 'none';
             }
         }
 
-        // Jobb gomb: Akkor látszik, ha van következő oldal a betöltött adatokban
+        // Jobb gomb: Akkor látszik, ha LÉTEZIK a következő oldal a bookPageData-ban
         if (this.rightButton) {
-             const nextPageId = String(currentPageNum === 0 ? 1 : currentPageNum + 1);
-             if (window.bookPageData && window.bookPageData.hasOwnProperty(nextPageId)) {
+             const nextPageNum = (currentPageNum === 0) ? 1 : currentPageNum + 1;
+             const nextPageId = String(nextPageNum);
+             if (window.bookPageData?.hasOwnProperty(nextPageId)) {
                  this.rightButton.style.opacity = '1';
                  this.rightButton.style.pointerEvents = 'auto';
              } else {
@@ -361,168 +318,93 @@ class FlipbookEngine {
         }
     }
 
-    // ==============================================================
-    // ==           VÁLTOZATLANUL HAGYOTT FÜGGVÉNYEK             ==
-    // ==============================================================
+    // --- VÁLTOZATLANUL HAGYOTT FÜGGVÉNYEK AZ EREDETIBŐL ---
 
     /**
-     * Navigációs menü megjelenítése (Logika maradhat, de az oldalszámokat a bookPageData-ból vehetné)
+     * Navigációs menü megjelenítése (Maradhat, de a tartalma nem lesz pontos)
      */
-    showNavigationMenu() {
-        // TODO: Ezt át lehetne írni, hogy a window.bookPageData kulcsai alapján generálja a listát,
-        //       és a kattintás a location.hash = `#${pageId}`-t állítsa be.
-        //       Jelenleg a régi this.chapters alapján működik, ami nem frissül.
-        //       Egyszerűsítésként egyelőre hagyjuk így, de ez nem lesz pontos.
-        console.warn("FlipbookEngine: showNavigationMenu még a régi 'this.chapters' alapján működik, nem a betöltött adatokból!");
-
-        const existingMenu = document.querySelector('.navigation-menu');
-        if (existingMenu) { existingMenu.remove(); return; }
-        const menu = document.createElement('div');
-        menu.className = 'navigation-menu';
-        // ... (Stílusok maradnak ugyanazok) ...
-        menu.style.position = 'fixed'; menu.style.bottom = '70px'; menu.style.right = '20px'; menu.style.width = '250px'; menu.style.maxHeight = '60vh'; menu.style.overflowY = 'auto'; menu.style.backgroundColor = 'rgba(0, 0, 0, 0.9)'; menu.style.borderRadius = '10px'; menu.style.padding = '15px'; menu.style.zIndex = '10000'; menu.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.5)';
-
-        const title = document.createElement('div');
-        // ... (Stílusok maradnak) ...
-        title.style.color = 'white'; title.style.fontSize = '18px'; title.style.fontWeight = 'bold'; title.style.marginBottom = '15px'; title.style.textAlign = 'center';
-        title.textContent = 'Navigáció (Korlátozott)';
-        menu.appendChild(title);
-
-        // Régi fejezetlista alapján (EZ NEM PONTOS MÁR!)
-        this.chapters.forEach(chapter => {
-            const item = document.createElement('div');
-            item.className = 'nav-item';
-            item.style.color = 'white'; item.style.padding = '10px'; item.style.margin = '5px 0'; item.style.cursor = 'pointer'; item.style.borderRadius = '5px'; item.style.transition = 'background-color 0.2s';
-
-            const currentHashId = location.hash.substring(1) || (this.currentPage === 0 ? 'borito' : String(this.currentPage));
-            if (String(chapter.page) === currentHashId || (chapter.page === 0 && currentHashId === 'borito')) {
-                 item.style.backgroundColor = 'rgba(127, 0, 255, 0.5)'; item.style.fontWeight = 'bold';
-            }
-            item.textContent = `${chapter.title} (${chapter.page === 0 ? 'Borító' : chapter.page + '. oldal'})`;
-            item.addEventListener('click', () => {
-                location.hash = `#${chapter.page === 0 ? 'borito' : chapter.page}`; // Hash váltás
-                menu.remove();
-            });
-            item.addEventListener('mouseenter', () => { /* ... hover ... */ });
-            item.addEventListener('mouseleave', () => { /* ... hover ... */ });
-            menu.appendChild(item);
-        });
-        document.body.appendChild(menu);
-        document.addEventListener('click', (e) => { /* ... bezárás ... */ }, { once: true });
-    }
+    showNavigationMenu() { /* ... (Marad ugyanaz, de figyelmeztetéssel) ... */
+         console.warn("FlipbookEngine: showNavigationMenu még a régi 'this.chapters' alapján működik!");
+         const existingMenu = document.querySelector('.navigation-menu'); if (existingMenu) { existingMenu.remove(); return; } const menu = document.createElement('div'); menu.className = 'navigation-menu'; menu.style.cssText="position: fixed; bottom: 70px; right: 20px; width: 250px; max-height: 60vh; overflow-y: auto; background-color: rgba(0, 0, 0, 0.9); border-radius: 10px; padding: 15px; z-index: 10000; box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);"; const title = document.createElement('div'); title.style.cssText="color: white; font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center;"; title.textContent = 'Navigáció (Korlátozott)'; menu.appendChild(title);
+         this.chapters.forEach(chapter => { const item = document.createElement('div'); item.className = 'nav-item'; item.style.cssText = "color: white; padding: 10px; margin: 5px 0; cursor: pointer; border-radius: 5px; transition: background-color 0.2s;"; const pageIdForChapter = chapter.page === 0 ? 'borito' : String(chapter.page); if (pageIdForChapter === String(this.currentPage) || (pageIdForChapter === 'borito' && this.currentPage === 0)) { item.style.backgroundColor = 'rgba(127, 0, 255, 0.5)'; item.style.fontWeight = 'bold'; } item.textContent = `${chapter.title} (${pageIdForChapter}. oldal)`; item.addEventListener('click', () => { location.hash = `#${pageIdForChapter}`; menu.remove(); }); menu.appendChild(item); }); document.body.appendChild(menu); document.addEventListener('click', (e) => { if (menu.parentNode && !menu.contains(e.target) && !e.target.closest('.control-button.navigation')) menu.remove(); }, { once: true });
+     }
 
     /**
      * Értesítés megjelenítése (Változatlan)
      */
-    showNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'flipbook-notification';
-        notification.textContent = message;
-        // ... (stílusok maradnak) ...
-        notification.style.position = 'fixed'; notification.style.top = '20px'; notification.style.left = '50%'; notification.style.transform = 'translateX(-50%)'; notification.style.padding = '10px 20px'; notification.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; notification.style.color = 'white'; notification.style.borderRadius = '5px'; notification.style.zIndex = '1000'; notification.style.opacity = '0'; notification.style.transition = 'opacity 0.3s ease';
-        document.body.appendChild(notification);
-        setTimeout(() => { notification.style.opacity = '1'; }, 10);
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 300);
-        }, 2500); // Kicsit hosszabb ideig látszik
+    showNotification(message) { /* ... (Marad ugyanaz) ... */
+        const n=document.createElement('div'); n.className='flipbook-notification'; n.textContent=message; n.style.cssText="position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 20px;background-color:rgba(0,0,0,0.8);color:white;border-radius:5px;z-index:10000;opacity:0;transition:opacity .3s ease"; document.body.appendChild(n); setTimeout(()=>{n.style.opacity='1'},10); setTimeout(()=>{n.style.opacity='0';setTimeout(()=>{if(n.parentNode)n.parentNode.removeChild(n)},300)},2500);
     }
 
     /**
      * Teljes képernyő váltás (Változatlan)
      */
-    toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                this.showNotification('Teljes képernyő hiba: ' + (err.message || err));
-            });
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
+    toggleFullscreen() { /* ... (Marad ugyanaz) ... */
+         if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => { this.showNotification('Teljes képernyő hiba: ' + (err.message || err)); }); } else { if (document.exitFullscreen) { document.exitFullscreen(); } }
     }
 
      /**
-     * Némítás gomb ikonjának frissítése
+     * Némítás gomb ikonjának frissítése (Változatlan)
      */
-     updateMuteButtonIcon(buttonElement){
-         if (!buttonElement) return;
-          buttonElement.innerHTML = this.isMuted ?
-                `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>` :
-                `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+     updateMuteButtonIcon(buttonElement){ /* ... (Marad ugyanaz) ... */
+          if (!buttonElement) return; buttonElement.innerHTML = this.isMuted ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>` : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
      }
 
     /**
      * Hang némítása/visszakapcsolása (Változatlan)
      */
-    toggleMute(button) {
-        this.isMuted = !this.isMuted;
-        console.log("Hang némítva:", this.isMuted);
-        this.updateMuteButtonIcon(button || document.querySelector('.control-button.mute'));
+    toggleMute(button) { /* ... (Marad ugyanaz) ... */
+         this.isMuted = !this.isMuted; console.log("Hang némítva:", this.isMuted); this.updateMuteButtonIcon(button || document.querySelector('.control-button.mute'));
     }
 
     /**
-     * Iframe biztonsági beállítások (ha szükséges volt korábban)
+     * Iframe biztonsági beállítások (Változatlan, de most az _renderPage hívja)
      */
-    _applyIframeSecurity(iframe) {
-      // Ezt a logikát a régi kódból át lehet venni, ha szükséges volt.
-      // Figyelem: Ez a renderPage metódusban fut le minden tartalom beírás után.
-       try {
-           const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-           if (!iframeDoc || !iframeDoc.body) return; // Még nem töltődött be teljesen?
-
-            // Script hozzáadása (másolás, jobb klikk stb. tiltása)
-            let securityScript = iframeDoc.getElementById('security-script');
-            if (!securityScript) {
-                 securityScript = iframeDoc.createElement('script');
-                 securityScript.id = 'security-script';
-                 securityScript.textContent = `
-                   document.addEventListener('contextmenu', e => e.preventDefault());
-                   document.addEventListener('copy', e => e.preventDefault());
-                   document.addEventListener('dragstart', e => e.preventDefault());
-                   document.body.style.userSelect = 'none';
-                   document.body.style.webkitUserSelect = 'none';
-                   document.body.style.msUserSelect = 'none';
-                 `;
-                 iframeDoc.body.appendChild(securityScript);
-            }
-
-            // CSS hozzáadása (kijelölés tiltása)
-             let securityStyle = iframeDoc.getElementById('security-style');
-             if(!securityStyle) {
-                 securityStyle = iframeDoc.createElement('style');
-                 securityStyle.id = 'security-style';
-                 securityStyle.textContent = `::selection { background: transparent; } * { -webkit-touch-callout: none; }`;
-                 iframeDoc.head.appendChild(securityStyle);
-             }
-
-       } catch (error) {
-           console.warn('Hiba az iframe biztonsági beállításakor:', error);
-       }
+    _applyIframeSecurity(iframe) { /* ... (Marad ugyanaz) ... */
+        try { const d=iframe.contentDocument||iframe.contentWindow?.document; if(!d||!d.body)return; let s=d.getElementById('security-script'); if(!s){s=d.createElement('script');s.id='security-script';s.textContent="document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('copy',e=>e.preventDefault());document.addEventListener('dragstart',e=>e.preventDefault());document.body.style.userSelect='none';document.body.style.webkitUserSelect='none';document.body.style.msUserSelect='none';"; d.body.appendChild(s);} let y=d.getElementById('security-style'); if(!y){y=d.createElement('style'); y.id='security-style'; y.textContent='::selection { background: transparent; } * { -webkit-touch-callout: none; }'; d.head.appendChild(y);} } catch(e){console.warn('Hiba iframe sec beáll.:',e);}
     }
 
+    /**
+     * Aktív oldal beállítása (Belső állapot frissítése) - MÓDOSÍTVA: pageId-t kap
+     */
+    _activatePage(pageId) {
+      // pageId lehet 'borito' vagy szám stringként
+      console.log(`[FlipbookEngine] Oldal aktiválása (belső állapot): ${pageId}`);
+      this.currentPage = pageId === 'borito' ? 0 : parseInt(pageId, 10);
+      if (isNaN(this.currentPage)) {
+          console.warn(`[FlipbookEngine] _activatePage érvénytelen pageId-t kapott: ${pageId}. Alaphelyzet (0).`);
+          this.currentPage = 0; // Vissza a borítóra hiba esetén
+      }
+      // A data-page attribútumot is frissítjük (bár lehet felesleges, ha a hash van)
+      document.body.setAttribute('data-page', pageId);
+      // Navigációs gombok frissítése az új állapot alapján
+      this.updateNavigationVisibility();
+      console.log(`[FlipbookEngine] Oldal sikeresen aktiválva, belső currentPage: ${this.currentPage}`);
+    }
+
+    // A _getOrCreateIframe metódusra valószínűleg már nincs szükség,
+    // mert csak a currentPageElement-et használjuk a rendereléshez.
+    // Kommentbe tesszük vagy töröljük.
+    /*
+    _getOrCreateIframe(pageNumber) {
+      // ...
+      return this.currentPageElement;
+    }
+    */
 
     /**
      * Könyv bezárás, erőforrások felszabadítása (Változatlan)
      */
-    destroy() {
-        document.removeEventListener('keydown', this.handleKeyDown); // Módosított referencia
-        if (this.leftButton) this.leftButton.removeEventListener('click', this.prevPage); // Módosított referencia
-        if (this.rightButton) this.rightButton.removeEventListener('click', this.nextPage); // Módosított referencia
-        // Esetleg a hashchange figyelőt is el kell távolítani, ha az engine felelős érte
-        // window.removeEventListener('hashchange', ...);
-        console.log("FlipbookEngine megsemmisítve.");
-    }
+    destroy() { /* ... (Marad ugyanaz) ... */
+         document.removeEventListener('keydown', this.handleKeyDown); if(this.leftButton)this.leftButton.removeEventListener('click', this.prevPage); if(this.rightButton)this.rightButton.removeEventListener('click', this.nextPage); console.log("FlipbookEngine megsemmisítve.");
+     }
 
-    // handleKeyDown referencia a removeEventListener-hez (marad ugyanaz)
-    handleKeyDown = (e) => {
-      if (e.key === 'ArrowLeft') this.prevPage();
-      else if (e.key === 'ArrowRight') this.nextPage();
-      // else if (e.key === 'f' || e.key === 'F') this.toggleFullscreen(); // Már a fő addEventListeners-ben van
-    };
+    // handleKeyDown referencia (Változatlan)
+    handleKeyDown = (e) => { /* ... (Marad ugyanaz) ... */
+         if(document.getElementById('activation-container'))return; if(e.key==='ArrowLeft')this.prevPage(); else if(e.key==='ArrowRight')this.nextPage();
+     };
 
 } // <-- FlipbookEngine osztály vége
 
-// Globális exportálás (marad ugyanaz)
-// window.FlipbookEngine = FlipbookEngine; // TypeScript-ben ez nem szükséges, ha a script globálisan töltődik be
+// Globális exportálás (marad változatlan)
+// window.FlipbookEngine = FlipbookEngine;
