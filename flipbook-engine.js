@@ -491,26 +491,34 @@ class FlipbookEngine {
         }, { once: true });
     }
     
-    /**
+ /**
  * Navigációs gombok láthatóságának frissítése az aktuális oldal alapján
  */
 updateNavigationVisibility() {
     console.log('Navigációs gombok frissítése, aktuális oldal:', this.currentPage);
     
-    const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
+    const maxFreePageNavigation = 2; // Ez az érték, ameddig lapozni lehet
     
-    // Bal gomb frissítése (hátra lapozás) - JAVÍTOTT feltétel
+    // Bal gomb frissítése (hátra lapozás) - JAVÍTOTT változat
     if (this.leftButton) {
-        // JAVÍTÁS: Csak az 1. oldalon mutassa a bal gombot, máshol ne
-        if (this.currentPage === 1) {
-            this.leftButton.style.opacity = '1';
-            this.leftButton.style.pointerEvents = 'auto';
-            console.log('Bal gomb megjelenítve');
-        }
-        else {
+        // JAVÍTÁS: A 0-s oldalon (borítón) SOHA ne jelenjen meg a bal gomb!
+        if (this.currentPage === 0) {
+            // Borítón vagyunk, itt soha nem kell vissza gomb
             this.leftButton.style.opacity = '0';
             this.leftButton.style.pointerEvents = 'none';
-            console.log('Bal gomb elrejtve');
+            console.log('Bal gomb elrejtve - borítón vagyunk');
+        }
+        else if (this.currentPage === 1) {
+            // 1. oldalon vagyunk, itt megjelenik a vissza gomb
+            this.leftButton.style.opacity = '1';
+            this.leftButton.style.pointerEvents = 'auto';
+            console.log('Bal gomb megjelenítve - 1. oldalon vagyunk');
+        }
+        else if (this.currentPage >= 2) {
+            // 2. vagy későbbi oldalon vagyunk, itt elrejtjük a gombot
+            this.leftButton.style.opacity = '0';
+            this.leftButton.style.pointerEvents = 'none';
+            console.log('Bal gomb elrejtve - 2. vagy későbbi oldalon vagyunk');
         }
     }
     
