@@ -492,42 +492,43 @@ class FlipbookEngine {
     }
     
     /**
-     * Navigációs gombok láthatóságának frissítése az aktuális oldal alapján
-     */
-    updateNavigationVisibility() {
-        console.log('Navigációs gombok frissítése, aktuális oldal:', this.currentPage);
-        
-        const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
-        
-       // Bal gomb frissítése (hátra lapozás) - VISSZAÁLLÍTVA AZ EREDETI LOGIKÁRA
-if (this.leftButton) {
-    if (this.currentPage <= 0 || this.currentPage >= 2) { // Visszaállítva az eredeti feltétel
-        this.leftButton.style.opacity = '0';
-        this.leftButton.style.pointerEvents = 'none';
-        console.log('Bal gomb elrejtve');
-    }
-    else {
-        this.leftButton.style.opacity = '1';
-        this.leftButton.style.pointerEvents = 'auto';
-        console.log('Bal gomb megjelenítve');
-    }
-}
-        
-        // Jobb gomb frissítése (előre lapozás)
-        if (this.rightButton) {
-            if (this.currentPage >= maxFreePageNavigation) {
-                // Ha elértük vagy túlléptük a max szabad lapozási limitet, elrejtjük
-                this.rightButton.style.opacity = '0';
-                this.rightButton.style.pointerEvents = 'none';
-                console.log('Jobb gomb elrejtve - elértük a max. lapozási limitet');
-            } else {
-                // Egyébként mutatjuk (borítólapon és 1. oldalon)
-                this.rightButton.style.opacity = '1';
-                this.rightButton.style.pointerEvents = 'auto';
-                console.log('Jobb gomb megjelenítve');
-            }
+ * Navigációs gombok láthatóságának frissítése az aktuális oldal alapján
+ */
+updateNavigationVisibility() {
+    console.log('Navigációs gombok frissítése, aktuális oldal:', this.currentPage);
+    
+    const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
+    
+    // Bal gomb frissítése (hátra lapozás) - JAVÍTOTT feltétel
+    if (this.leftButton) {
+        // JAVÍTÁS: Csak az 1. oldalon mutassa a bal gombot, máshol ne
+        if (this.currentPage === 1) {
+            this.leftButton.style.opacity = '1';
+            this.leftButton.style.pointerEvents = 'auto';
+            console.log('Bal gomb megjelenítve');
+        }
+        else {
+            this.leftButton.style.opacity = '0';
+            this.leftButton.style.pointerEvents = 'none';
+            console.log('Bal gomb elrejtve');
         }
     }
+    
+    // Jobb gomb frissítése (előre lapozás)
+    if (this.rightButton) {
+        if (this.currentPage >= maxFreePageNavigation) {
+            // Ha elértük vagy túlléptük a max szabad lapozási limitet, elrejtjük
+            this.rightButton.style.opacity = '0';
+            this.rightButton.style.pointerEvents = 'none';
+            console.log('Jobb gomb elrejtve - elértük a max. lapozási limitet');
+        } else {
+            // Egyébként mutatjuk (borítólapon és 1. oldalon)
+            this.rightButton.style.opacity = '1';
+            this.rightButton.style.pointerEvents = 'auto';
+            console.log('Jobb gomb megjelenítve');
+        }
+    }
+}
     
     /**
      * Értesítés megjelenítése
