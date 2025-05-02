@@ -48,7 +48,7 @@
           return; // Ha nincs, nem tudunk mit tenni
         }
 
-        // Megjelenítjük a böngésző telepítési párbeszédablakát
+        // Megjelenítjük a böngésző telepítési párbeszédablakát, ha mindenigaz
         try {
           console.log('[InstallPrompt] Telepítési prompt megjelenítése...');
           deferredPrompt.prompt();
