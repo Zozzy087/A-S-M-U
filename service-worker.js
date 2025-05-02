@@ -1,8 +1,8 @@
-// ► Service Worker - Mobilbarát verzió (v19)
+// ► Service Worker - Mobilbarát verzió (v24)
 // Optimalizálva mobil eszközökre, jobb hibakezeléssel
 
 // Cache név
-const CACHE_NAME = 'kalandkonyv-cache-v19';
+const CACHE_NAME = 'kalandkonyv-cache-v24';
 
 // Fontos statikus fájlok, amelyeket mindenképp gyorsítótárazni kell
 const CRITICAL_ASSETS = [
@@ -14,6 +14,7 @@ const CRITICAL_ASSETS = [
   'js/firebase-config.js',  // Firebase konfiguráció
   'js/auth-service.js',     // Autentikációs szolgáltatás
   'js/activation-ui.js',    // Aktivációs felület
+  'js/pages-data.js',       // A könyv oldalainak adatai
   'files/icon-192.png',
   'files/icon-512.png'
 ];

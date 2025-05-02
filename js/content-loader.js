@@ -1,5 +1,5 @@
 /**
- * Tartalom betöltő szolgáltatás (MÓDOSÍTOTT Verzió)
+ * Tartalom betöltő szolgáltatás (MÓDOSÍTOTT Verzió a pages-data.js támogatással)
  * Ez a szolgáltatás felelős a könyv oldalainak biztonságos betöltéséért,
  * ellenőrizve a hozzáférési jogosultságot minden egyes oldal betöltése előtt.
  */
@@ -8,9 +8,18 @@ class ContentLoader {
     this.pages = {}; // Gyorsítótár a betöltött oldalakhoz
     this.renderCallback = null; // Visszahívás függvény az oldalak megjelenítéséhez
     this.isInitialized = false; // Jelzi, hogy a Firebase DB kapcsolat létrejött-e
+    this.bookDataLoaded = false; // Jelzi, hogy a könyv adatok betöltve vannak-e
 
     // Inicializálást késleltetjük, amíg a Firebase betöltődik
     this._initWhenFirebaseReady();
+    
+    // Könyv adatok betöltése
+    this._loadBookData();
+    
+    // Hash változás figyelése
+    window.addEventListener('hashchange', this._handleHashChange.bind(this));
+    // Kezdeti hash ellenőrzése
+    this._checkInitialHash();
   }
 
   /**
@@ -51,68 +60,112 @@ class ContentLoader {
   }
 
   /**
-   * Tartalom betöltése (ez a fő belépési pont)
+   * Pages-data.js betöltése
+   * @private
+   */
+  _loadBookData() {
+    // Ellenőrizzük, hogy a bookPageData már létezik-e
+    if (typeof window.bookPageData !== 'undefined') {
+      console.log('[ContentLoader] bookPageData már elérhető, betöltés kihagyva.');
+      this.bookDataLoaded = true;
+      return;
+    }
+    
+    console.log('[ContentLoader] pages-data.js betöltése...');
+    const script = document.createElement('script');
+    script.src = 'js/pages-data.js';
+    script.onload = () => {
+      console.log('[ContentLoader] pages-data.js betöltése sikeres.');
+      this.bookDataLoaded = true;
+    };
+    script.onerror = (error) => {
+      console.error('[ContentLoader] pages-data.js betöltése sikertelen:', error);
+      this.bookDataLoaded = false;
+    };
+    document.head.appendChild(script);
+  }
+
+  /**
+   * Tartalom betöltése - MÓDOSÍTOTT a pages-data.js használatához
    * @param {string} pageId - Az oldal azonosítója (pl. "1", "2", "borito")
    * @returns {Promise<boolean>} - Sikeres volt-e a betöltés
    */
   async loadContent(pageId) {
     console.log(`[ContentLoader] Tartalom betöltése megkezdve: ${pageId}`);
 
-    // Ellenőrizzük a jogosultságot, MIELŐTT bármit csinálnánk
-    // (kivéve a borítót, amihez nem kell jogosultság)
-    if (pageId !== 'borito') {
-        const hasAccess = await this._hasAccessToPage(pageId);
-        if (!hasAccess) {
-            console.warn(`[ContentLoader] Nincs jogosultság az oldalhoz: ${pageId}. Hibaoldal megjelenítése.`);
-            this._renderErrorPage(pageId); // Megjelenítjük a hibaoldalt
-            return false; // Nincs jogosultság, nem töltünk be semmit
-        }
-        console.log(`[ContentLoader] Jogosultság rendben az oldalhoz: ${pageId}`);
+    // Ingyenes/védett oldalak meghatározása
+    const pageNum = parseInt(pageId, 10);
+    const INGYENES_OLDAL_LIMIT = 2; // Itt állítsd be, hanyadik oldaltól kezdve VÉDETT a tartalom
+    const isFreePage = pageId === 'borito' || (!isNaN(pageNum) && pageNum <= INGYENES_OLDAL_LIMIT);
+
+    // Jogosultság ellenőrzése a védett oldalaknál
+    if (!isFreePage) {
+      const hasAccess = await this._hasAccessToPage(pageId);
+      if (!hasAccess) {
+        console.warn(`[ContentLoader] Nincs jogosultság a védett oldalhoz: ${pageId}. Hibaoldal megjelenítése.`);
+        this._renderErrorPage(pageId);
+        return false;
+      }
+      console.log(`[ContentLoader] Jogosultság rendben a védett oldalhoz: ${pageId}`);
     } else {
-        console.log(`[ContentLoader] Borító betöltése, jogosultság nem szükséges.`);
+      console.log(`[ContentLoader] Ingyenes oldal (${pageId}) betöltése, jogosultság ellenőrzés nem szükséges.`);
     }
 
-
     // Ha már be van töltve a gyorsítótárban, onnan szolgáljuk ki
-    // (A jogosultságot már fent ellenőriztük)
     if (this.pages[pageId]) {
       console.log(`[ContentLoader] Oldal betöltése cache-ből: ${pageId}`);
       this._renderContent(pageId, this.pages[pageId]);
       return true;
     }
 
-    // Ha nincs cache-elve, megpróbáljuk betölteni (jogosultság már oké)
     try {
-      // Először megpróbáljuk a helyi fájlból betölteni
-      const content = await this._loadFromFileAttempt(pageId);
+      let content = null;
+
+      // 1. Először a bookPageData-ból próbáljuk betölteni
+      if (typeof window.bookPageData !== 'undefined' && window.bookPageData[pageId]) {
+        console.log(`[ContentLoader] Oldal (${pageId}) betöltve a pages-data.js-ből.`);
+        content = window.bookPageData[pageId];
+      } 
+      // 2. Ha nincs bookPageData vagy ebben az oldalban, visszatérünk a régi módszerekhez
+      else {
+        console.log(`[ContentLoader] bookPageData nem elérhető vagy nem tartalmazza az oldalt (${pageId}), alternatív betöltésre váltás...`);
+        
+        // Ingyenes oldalaknál megpróbálhatjuk a fájlból
+        if (isFreePage) {
+          content = await this._loadFromFileAttempt(pageId);
+          if (!content && this.isInitialized) {
+            content = await this._loadFromFirebaseAttempt(pageId);
+          }
+        } 
+        // Védett oldalaknál csak Firebase-ből próbálkozunk
+        else if (this.isInitialized) {
+          content = await this._loadFromFirebaseAttempt(pageId);
+        }
+      }
+
+      // Ha sikerült tartalmat betölteni
       if (content) {
-        this.pages[pageId] = content; // Gyorsítótárazás
+        // Egyedi azonosító/vízjel hozzáadása a tartalomhoz
+        content = this._addIdentifierToContent(content, pageId);
+        
+        // Gyorsítótárazás és megjelenítés
+        this.pages[pageId] = content;
         this._renderContent(pageId, content);
+        console.log(`[ContentLoader] Oldal (${pageId}) sikeresen betöltve és renderelve.`);
+        
+        // URL hash frissítése
+        window.location.hash = '#' + pageId;
+        
         return true;
       }
 
-      // Ha helyi betöltés nem sikerült, megpróbáljuk a Firebase-ből
-      // (Csak akkor, ha a DB kapcsolat inicializálva van)
-      if (this.isInitialized) {
-        const firebaseContent = await this._loadFromFirebaseAttempt(pageId);
-        if (firebaseContent) {
-          this.pages[pageId] = firebaseContent; // Gyorsítótárazás
-          this._renderContent(pageId, firebaseContent);
-          return true;
-        }
-      } else {
-          console.warn(`[ContentLoader] Firebase DB még nem inicializált, Firebase betöltési kísérlet kihagyva: ${pageId}`);
-      }
-
-      // Ha egyik forrásból sem sikerült betölteni (és jogosultságunk volt)
-      console.error(`[ContentLoader] Nem sikerült betölteni a tartalmat egyik forrásból sem: ${pageId}`);
-      // Itt egy általánosabb hibaoldalt jeleníthetünk meg, ami nem a jogosultságra utal
-      this._renderGenericErrorPage(pageId, 'A tartalom átmenetileg nem elérhető.');
+      // Ha nem sikerült tartalmat betölteni
+      console.error(`[ContentLoader] Nem sikerült betölteni a tartalmat: ${pageId}`);
+      this._renderGenericErrorPage(pageId, 'A kért tartalom nem található vagy nem elérhető.');
       return false;
-
     } catch (error) {
       console.error(`[ContentLoader] Váratlan hiba az oldal betöltésekor (${pageId}):`, error);
-       this._renderGenericErrorPage(pageId, 'Váratlan hiba történt a tartalom betöltése közben.');
+      this._renderGenericErrorPage(pageId, 'Váratlan hiba történt a tartalom betöltése közben.');
       return false;
     }
   }
@@ -240,6 +293,63 @@ class ContentLoader {
     }
   }
 
+  /**
+   * Egyedi azonosító/vízjel/lábléc hozzáadása a tartalomhoz
+   * @param {string} content - Az oldal HTML tartalma
+   * @param {string} pageId - Az oldal azonosítója
+   * @returns {string} - A módosított HTML tartalom
+   */
+  _addIdentifierToContent(content, pageId) {
+    try {
+      // Próbáljuk megszerezni a felhasználó azonosítóját
+      let userId = "ISMERETLEN";
+      let activationCode = "NINCS";
+      
+      // 1. Firebase User ID lekérése
+      if (window.firebaseApp && window.firebaseApp.auth && window.firebaseApp.auth.currentUser) {
+        userId = window.firebaseApp.auth.currentUser.uid.substring(0, 8); // Csak az első 8 karakter
+      }
+      
+      // 2. Aktivációs kód ellenőrzése a localStorage-ban
+      // Ezt az értéket a markCodeAsUsed függvényben kellene elmenteni
+      try {
+        const storedCode = localStorage.getItem('activation_code');
+        if (storedCode) {
+          activationCode = storedCode;
+        } else {
+          // Ha nincs közvetlenül mentve, ellenőrizzük más helyeken is
+          const authData = localStorage.getItem('kalandkonyv_auth');
+          if (authData) {
+            const parsedData = JSON.parse(authData);
+            if (parsedData.activationCode) {
+              activationCode = parsedData.activationCode;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[ContentLoader] Hiba az aktivációs kód kiolvasásakor:', e);
+      }
+      
+      // Az aktuális dátum
+      const currentDate = new Date().toLocaleDateString();
+      
+      // Lábléc HTML kód létrehozása
+      const footerHtml = `
+<div style="position: fixed; bottom: 5px; right: 10px; font-size: 8px; color: #999; opacity: 0.5; z-index: 9999; pointer-events: none; user-select: none;">
+  © 2025 Zordán Erik - Licenc: ${activationCode} - ID: ${userId} - Oldal: ${pageId} - ${currentDate}
+</div>`;
+      
+      // Lábléc beszúrása a HTML végére
+      if (content.includes('</body>')) {
+        return content.replace('</body>', `${footerHtml}</body>`);
+      } else {
+        return content + footerHtml;
+      }
+    } catch (error) {
+      console.error('[ContentLoader] Hiba az azonosító hozzáadásakor:', error);
+      return content; // Hiba esetén az eredeti tartalmat adjuk vissza
+    }
+  }
 
   /**
    * Tartalom megjelenítése a renderCallback segítségével
@@ -346,6 +456,39 @@ class ContentLoader {
 
      this._renderContent(pageId, errorContent);
    }
+
+  /**
+   * Kezdeti hash ellenőrzése betöltéskor
+   */
+  _checkInitialHash() {
+    const hash = window.location.hash;
+    if (hash && hash.length > 1) {
+      const pageId = hash.substring(1); // A # utáni rész
+      console.log(`[ContentLoader] Kezdeti hash észlelve: ${hash}, oldal betöltése: ${pageId}`);
+      
+      // Kis késleltetés, hogy a rendszer inicializálódjon
+      setTimeout(() => {
+        if (window.flipbookInstance) {
+          window.flipbookInstance.loadPage(pageId);
+        }
+      }, 1500);
+    }
+  }
+
+  /**
+   * Hash változás kezelése
+   */
+  _handleHashChange() {
+    const hash = window.location.hash;
+    if (hash && hash.length > 1) {
+      const pageId = hash.substring(1); // A # utáni rész
+      console.log(`[ContentLoader] Hash változás észlelve: ${hash}, oldal betöltése: ${pageId}`);
+      
+      if (window.flipbookInstance) {
+        window.flipbookInstance.loadPage(pageId);
+      }
+    }
+  }
 
 } // <-- ContentLoader osztály vége
 
