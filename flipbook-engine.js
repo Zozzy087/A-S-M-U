@@ -202,10 +202,14 @@ class FlipbookEngine {
         // Érintés események (swipe)
         let touchStartX = 0;
         let touchEndX = 0;
-        this.bookContainer.addEventListener('touchstart', (e) => {
+        this.bookContainer.addEventListener('touchstart', (e) => { if (this.currentPage === 0) {
+    return;
+}
             touchStartX = e.changedTouches[0].screenX;
         }, { passive: true });
-        this.bookContainer.addEventListener('touchend', (e) => {
+        this.bookContainer.addEventListener('touchend', (e) => { if (this.currentPage === 0) {
+    return;
+}
             touchEndX = e.changedTouches[0].screenX;
             this.handleSwipe(touchStartX, touchEndX);
         }, { passive: true });
@@ -234,6 +238,24 @@ class FlipbookEngine {
             const pagePath = pageNumber === 0 ? 'pages/borito.html' : `pages/${pageNumber}.html`;
             this.currentPageElement.src = pagePath;
             this.currentPage = pageNumber;
+			
+			// ---- ÚJ RÉSZ KEZDETE ----
+// Explicit interaktivitás és kurzor beállítása az iframe-en
+if (this.currentPageElement) {
+    if (pageNumber === 0) {
+        // Borító: tiltsuk le az egéreseményeket és állítsuk be a kurzort
+        this.currentPageElement.style.pointerEvents = 'none';
+        this.currentPageElement.style.cursor = 'default';
+        // console.log('Borító iframe inaktívvá téve.'); // Ez a sor nem fontos
+    } else {
+        // Nem borító: engedélyezzük az egéreseményeket
+        this.currentPageElement.style.pointerEvents = '';
+        this.currentPageElement.style.cursor = '';
+        // console.log(`Oldal ${pageNumber} iframe aktívvá téve.`); // Ez a sor nem fontos
+    }
+}
+// ---- ÚJ RÉSZ VÉGE ----
+			
             // Beállítjuk a data-page attribútumot a body tag-en
             document.body.setAttribute('data-page', pageNumber.toString());
             // Az iframe betöltése után állítsuk be a tartalom méretét
