@@ -1,5 +1,5 @@
 // ----- pages-data.js -----
-// Automatikusan generálva: 2025-05-02T12:52:38.188Z
+// Automatikusan generálva: 2025-05-02T13:53:56.703Z
 // Tartalmazza a könyv oldalainak HTML kódját.
 
 const bookPageData = {
