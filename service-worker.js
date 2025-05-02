@@ -1,8 +1,8 @@
-// ► Service Worker - SPA / JS Adat Verzió (pl. v20)
+// ► Service Worker - SPA / JS Adat Verzió (pl. v21)
 // Gyorsítótárazza az alkalmazás héjat és a pages-data.js-t.
 
 // ÚJ VERZIÓSZÁM!
-const CACHE_NAME = 'kalandkonyv-cache-v20'; // <-- NÖVELT VERZIÓSZÁM
+const CACHE_NAME = 'kalandkonyv-cache-v21'; // <-- NÖVELT VERZIÓSZÁM
 
 // Fontos statikus fájlok + AZ ÚJ ADATFÁJL
 const CRITICAL_ASSETS = [
