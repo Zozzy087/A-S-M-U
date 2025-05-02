@@ -214,7 +214,7 @@ class FlipbookEngine {
      * Swipe kezelése
      */
     handleSwipe(startX, endX) {
-        const swipeThreshold = 50;
+        const swipeThreshold = 100;
         if (endX < startX - swipeThreshold) {
             // Jobbra swipe -> Következő oldal
             this.nextPage();
