@@ -1,8 +1,8 @@
-// ► Service Worker - Mobilbarát verzió (v19)
+// ► Service Worker - Mobilbarát verzió (v28)
 // Optimalizálva mobil eszközökre, jobb hibakezeléssel
 
 // Cache név
-const CACHE_NAME = 'kalandkonyv-cache-v19';
+const CACHE_NAME = 'kalandkonyv-cache-v28';
 
 // Fontos statikus fájlok, amelyeket mindenképp gyorsítótárazni kell
 const CRITICAL_ASSETS = [
