@@ -6,6 +6,10 @@
 class ContentLoader {
   constructor() {
     this.pages = {}; // Gyorsítótár a betöltött oldalakhoz
+	// Cache törlése, ha van licenc ID, de a cache-elt oldalak még nem tartalmaznak láblécsávot
+if (localStorage.getItem('book_license_id')) {
+  this.pages = {}; // Kiürítjük a cache-t, hogy minden oldal frissen töltődjön be
+}
     this.renderCallback = null; // Visszahívás függvény az oldalak megjelenítéséhez
     this.isInitialized = false; // Jelzi, hogy a Firebase DB kapcsolat létrejött-e
 
