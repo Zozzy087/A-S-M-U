@@ -1,395 +1,235 @@
-// ► Service Worker - Mobilbarát verzió (v19)
-// Optimalizálva mobil eszközökre, jobb hibakezeléssel
+// ► Service Worker - SPA / JS Adat Verzió (pl. v20)
+// Gyorsítótárazza az alkalmazás héjat és a pages-data.js-t.
 
-// Cache név
-const CACHE_NAME = 'kalandkonyv-cache-v19';
+// ÚJ VERZIÓSZÁM!
+const CACHE_NAME = 'kalandkonyv-cache-v20'; // <-- NÖVELT VERZIÓSZÁM
 
-// Fontos statikus fájlok, amelyeket mindenképp gyorsítótárazni kell
+// Fontos statikus fájlok + AZ ÚJ ADATFÁJL
 const CRITICAL_ASSETS = [
   '/',                  // start_url
   'index.html',         // főindex
   'offline.html',       // offline fallback oldal
   'manifest.json',      // PWA manifest
   'common-styles.css',  // közös CSS
-  'js/firebase-config.js',  // Firebase konfiguráció
-  'js/auth-service.js',     // Autentikációs szolgáltatás
-  'js/activation-ui.js',    // Aktivációs felület
+  'js/firebase-config.js',
+  'js/auth-service.js',
+  'js/activation-ui.js',
+  'js/auth-token-service.js', // Ez is kritikus lehet
+  'js/content-loader.js',   // Ez is kritikus
+  'js/pages-data.js',       // ===> ÚJ: Az oldalakat tartalmazó adatfájl <===
+  'flipbook-engine.js',     // A motort is gyorsítótárazzuk
   'files/icon-192.png',
-  'files/icon-512.png'
+  'files/icon-512.png',
+  'images/homokora_loader.gif' // A betöltő GIF is kell offline
 ];
 
-// Másodlagos fontosságú statikus fájlok
+// Másodlagos fontosságú statikus fájlok (pl. hangok)
 const SECONDARY_ASSETS = [
-  'flipbook-engine.js', // motorod fő JS fájlja
   'sounds/pageturn-102978.mp3'
+  // Ide jöhetnek a kocka képek is, ha nem túl sok
+  // 'images/d1.png', 'images/d2.png', ...
 ];
 
-// Külső függőségek (feltételes cache)
+// Külső függőségek (Firebase JS SDK, Google Fonts)
 const EXTERNAL_DEPENDENCIES = [
   'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap',
   'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js'
+  'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js',
+  'https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js' // Functions SDK is kellhet
+  // Figyelem: A fonts.gstatic.com fájlokat a fetch handler külön kezeli
 ];
 
-// ► Dinamikusan generáljuk az oldalakat (borító + 1…300)
-//    totalPages változóval szabályozod, hány fejezeted van.
-const totalPages = 300;
-const PAGE_ASSETS = Array.from(
-  { length: totalPages + 1 },      // 0..300
-  (_, i) => i === 0
-    ? 'pages/borito.html'           // 0 → borító
-    : `pages/${i}.html`             // 1..300
-);
-
-// Képek, amelyeket gyorsítótárazni kell
+// Képek, amelyeket esetleg külön akarunk kezelni (ha sok van)
 const IMAGE_ASSETS = [
   'images/d1.png','images/d2.png','images/d3.png',
   'images/d4.png','images/d5.png','images/d6.png'
+  // Ide veheted fel a többi fontos képet is, ha szükséges
 ];
 
-// Összesített statikus erőforrások
-const STATIC_RESOURCES = [
-  ...CRITICAL_ASSETS,
-  ...SECONDARY_ASSETS,
-  ...IMAGE_ASSETS
-];
-
-// Prioritásos telepítés - csak a kritikus erőforrások
+// --- TELEPÍTÉS ---
 self.addEventListener('install', event => {
-  console.log('[Service Worker] Telepítés...');
-  
+  console.log('[Service Worker] Telepítés v20...');
   event.waitUntil(
-    // Először csak a kritikus erőforrásokat mentjük
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[Service Worker] Kritikus erőforrások cache-elése...');
-        
-        // Egyesével próbáljuk cache-elni az erőforrásokat
-        const cachePromises = CRITICAL_ASSETS.map(url => {
+        console.log('[Service Worker] Kritikus erőforrások gyorsítótárazása...');
+        // Kritikus + Képek gyorsítótárazása telepítéskor
+        const assetsToCache = [...CRITICAL_ASSETS, ...IMAGE_ASSETS];
+        const cachePromises = assetsToCache.map(url => {
+          // A külső Firebase scriptekhez adjunk egy cache:"reload" flag-et? Vagy hagyjuk?
+          // Legyen egyszerűbb: próbáljuk cache-elni őket is.
           return cache.add(url).catch(error => {
-            console.warn('[Service Worker] Nem sikerült cache-elni:', url, error);
+            console.warn(`[Service Worker] Nem sikerült gyorsítótárazni (install): ${url}`, error);
+            // Ha egy kritikus asset (pl. pages-data.js) nem cache-elhető, az nagy baj lehet offline!
+            if (CRITICAL_ASSETS.includes(url)) {
+                 console.error(`[Service Worker] KRITIKUS ASSET (${url}) gyorsítótárazása sikertelen! Offline működés veszélyben lehet.`);
+                 // Dönthetünk úgy, hogy megállítjuk a telepítést? Vagy csak figyelmeztetünk?
+                 // return Promise.reject(`Failed to cache critical asset: ${url}`);
+            }
             return Promise.resolve(); // Folytatjuk a többi fájllal
           });
         });
-        
         return Promise.all(cachePromises);
       })
       .then(() => {
-        console.log('[Service Worker] Kritikus erőforrások cache-elése sikeres');
-        return self.skipWaiting();
+        console.log('[Service Worker] Kritikus erőforrások és képek gyorsítótárazása sikeres.');
+        return self.skipWaiting(); // Azonnal aktiváljuk az új SW-t (lehet, hogy frissítés kell a kliens oldalon)
       })
       .catch(err => {
         console.error('[Service Worker] Telepítési hiba:', err);
-        return self.skipWaiting();
+        // Sikertelen telepítés esetén nem aktiválódik az új SW
       })
   );
 });
 
-// Aktiválás utáni másodlagos telepítés
+// --- AKTIVÁLÁS ---
 self.addEventListener('activate', event => {
-  console.log('[Service Worker] Aktiválás...');
-  
+  console.log('[Service Worker] Aktiválás v20...');
   event.waitUntil(
-    // Régi cache-ek törlése
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k !== CACHE_NAME)
+          .filter(k => k !== CACHE_NAME) // Csak a NEM ehhez a verzióhoz tartozó cache-eket töröljük
           .map(k => {
-            console.log('[Service Worker] Régi cache törlése:', k);
+            console.log('[Service Worker] Régi gyorsítótár törlése:', k);
             return caches.delete(k);
           })
       )
     )
     .then(() => {
-      console.log('[Service Worker] Régi cache-ek törlése kész');
-      
-      // Másodlagos erőforrások betöltése (nem blokkolja az aktiválást)
+      console.log('[Service Worker] Régi gyorsítótárak törlése kész.');
+      // Másodlagos assetek gyorsítótárazása a háttérben
       setTimeout(() => {
-        caches.open(CACHE_NAME).then(cache => {
-          console.log('[Service Worker] Másodlagos erőforrások cache-elése...');
-          
-          // Másodlagos erőforrások cache-elése
-          SECONDARY_ASSETS.forEach(url => {
-            fetch(url)
-              .then(response => {
-                if (response.ok) {
-                  cache.put(url, response);
-                }
-              })
-              .catch(err => {
-                console.warn('[Service Worker] Másodlagos erőforrás cache-elési hiba:', url, err);
+          caches.open(CACHE_NAME).then(cache => {
+              console.log('[Service Worker] Másodlagos erőforrások (pl. hang) gyorsítótárazása...');
+              SECONDARY_ASSETS.forEach(url => {
+                  cache.add(url).catch(err => console.warn(`[SW Activate] Hiba másodlagos asset cache-elésnél (${url}):`, err));
               });
+              // Külső függőségeket nem itt cache-elünk, hanem a fetch során vagy installkor
           });
-          
-          // Külső függőségek cache-elése
-          EXTERNAL_DEPENDENCIES.forEach(url => {
-            fetch(url, { mode: 'no-cors' })
-              .then(response => {
-                cache.put(url, response);
-              })
-              .catch(err => {
-                console.warn('[Service Worker] Külső függőség cache-elési hiba:', url, err);
-              });
-          });
-          
-          // Kezdőoldalak (első 5 oldal) cache-elése
-          const initialPages = PAGE_ASSETS.slice(0, 6); // Borító + első 5 oldal
-          initialPages.forEach(url => {
-            fetch(url)
-              .then(response => {
-                if (response.ok) {
-                  cache.put(url, response);
-                }
-              })
-              .catch(err => {
-                console.warn('[Service Worker] Kezdőoldal cache-elési hiba:', url, err);
-              });
-          });
-        });
-      }, 1000); // 1 másodperc késleltetés
-      
-      return self.clients.claim();
+      }, 1000);
+      return self.clients.claim(); // Az új SW azonnal átveszi az irányítást az aktív kliensek felett
+    })
+    .catch(err => {
+        console.error('[Service Worker] Hiba az aktiválás vagy régi cache törlése közben:', err);
     })
   );
 });
 
-// Kérések kezelése
+// --- KÉRÉSEK KEZELÉSE (FETCH) ---
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  
-  // Firebase API kérések - mindig hálózatról
-  if (url.hostname.includes('firestore.googleapis.com') || 
-      url.hostname.includes('firebase') ||
-      url.hostname.includes('googleapis.com') ||
-      url.pathname.includes('auth')) {
-    // Nem avatkozunk be a Firebase kérésekbe, hanem hagyjuk, hogy a böngésző kezelje
-    return;
+
+  // 1. Firebase API hívásokat NE cache-eljük, menjenek a hálózatra
+  if (url.hostname.includes('firestore.googleapis.com') ||
+      url.hostname.includes('identitytoolkit.googleapis.com') || // Auth hívások
+      url.hostname.includes('google.com/recaptcha') || // ReCaptcha, ha használod
+      url.hostname.includes('firebasestorage.googleapis.com') || // Ha használnál Storage-ot
+      url.hostname.includes('firebaseio.com') || // Realtime DB, ha használnád
+      (url.hostname.includes('cloudfunctions') && url.pathname.includes('generateSecureToken')) // A token generáló function
+      ) {
+    // console.log('[SW Fetch] Firebase/API kérés átengedve:', event.request.url);
+    return; // Hagyjuk, hogy a böngésző kezelje
   }
 
-  // Képek és ikonok kezelése (cache-first)
-  if (url.pathname.startsWith('/images/') || 
-      url.pathname.startsWith('/files/') || 
-      IMAGE_ASSETS.some(asset => url.pathname.endsWith(asset))) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) {
-          // Ha cache-ben van, visszaadjuk
-          return cached;
-        }
-        
-        // Ha nincs cache-ben, hálózatról kérjük
-        return fetch(event.request)
-          .then(networkRes => {
-            if (networkRes.ok) {
-              // Ha sikeres, elmentjük a cache-be
-              const copy = networkRes.clone();
-              caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, copy);
-              });
-            }
-            return networkRes;
-          })
-          .catch(() => {
-            // Ha nincs kép, üres 404-et adunk vissza
-            return new Response('Image not found', { status: 404 });
-          });
-      })
-    );
-    return;
-  }
-
-  // Google Fonts kezelése (special handling)
+  // 2. Google Fonts kérések (CSS és font fájlok) - Cache first, majd network
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        
-        return fetch(event.request, { mode: 'no-cors' })
-          .then(response => {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, copy);
-            });
-            return response;
-          })
-          .catch(err => {
-            console.warn('[Service Worker] Google Fonts betöltési hiba:', err);
-            // Fallback font nem lehetséges
-            return fetch(event.request);
-          });
-      })
-    );
-    return;
-  }
-
-  // HTML oldalak kezelése (Cache, majd network, updates cache)
-  if (url.pathname.endsWith('.html') || 
-      url.pathname === '/' || 
-      url.pathname.startsWith('/pages/')) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        // Először a cache-t próbáljuk
-        if (cached) {
-          // Háttérben frissítjük a cache-t
-          fetch(event.request).then(response => {
-            if (response.ok) {
-              caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, response);
-              });
-            }
-          }).catch(() => {/* Csendes hiba */});
-          
-          return cached;
+      caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) {
+          // console.log('[SW Fetch] Google Font cache-ből:', event.request.url);
+          return cachedResponse;
         }
-        
-        // Ha nincs a cache-ben, akkor hálózatról kérjük
-        return fetch(event.request)
-          .then(networkRes => {
-            if (networkRes.ok) {
-              // Ha sikeres, elmentjük a cache-be
-              const copy = networkRes.clone();
-              caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, copy);
-              });
-            }
-            return networkRes;
-          })
-          .catch(() => {
-            // Ha offline vagyunk, megfelelő fallback-et adunk
-            if (url.pathname === '/' || url.pathname.endsWith('index.html')) {
-              return caches.match('offline.html');
-            } else if (url.pathname.startsWith('/pages/')) {
-              return caches.match('offline.html');
-            }
-            
-            // Egyéb esetekben üres 404-et adunk vissza
-            return new Response('Resource not available offline', { 
-              status: 404, 
-              headers: new Headers({ 'Content-Type': 'text/plain' }) 
-            });
-          });
-      })
-    );
-    return;
-  }
-
-  // JS/CSS fájlok kezelése (Cache, majd network, updates cache)
-  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        // Először a cache-t próbáljuk
-        if (cached) {
-          // Háttérben frissítjük a cache-t, ha nem kritikus JS/CSS
-          if (!url.pathname.includes('firebase-config.js') && 
-              !url.pathname.includes('auth-service.js') && 
-              !url.pathname.includes('activation-ui.js')) {
-            fetch(event.request).then(response => {
-              if (response.ok) {
-                caches.open(CACHE_NAME).then(cache => {
-                  cache.put(event.request, response);
-                });
-              }
-            }).catch(() => {/* Csendes hiba */});
+        // console.log('[SW Fetch] Google Font hálózatról:', event.request.url);
+        return fetch(event.request).then(networkResponse => {
+          // Itt nem 'no-cors' módban kérjük, mert szükségünk van a válaszra a cache-eléshez
+          if (networkResponse.ok) {
+             const responseToCache = networkResponse.clone();
+             caches.open(CACHE_NAME).then(cache => {
+               cache.put(event.request, responseToCache);
+             });
           }
-          
-          return cached;
-        }
-        
-        // Ha nincs a cache-ben, akkor hálózatról kérjük
-        return fetch(event.request)
-          .then(networkRes => {
-            if (networkRes.ok) {
-              // Ha sikeres, elmentjük a cache-be
-              const copy = networkRes.clone();
-              caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, copy);
-              });
-            }
-            return networkRes;
-          })
-          .catch(() => {
-            // JS/CSS fájlokhoz nincs offline fallback
-            return new Response('Resource not available offline', { 
-              status: 404, 
-              headers: new Headers({ 'Content-Type': 'text/plain' }) 
-            });
-          });
-      })
-    );
-    return;
-  }
-
-  // Minden egyéb kérés (network-first)
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Ha sikeres, elmentjük a cache-be
-        if (response.ok && event.request.method === 'GET') {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, copy);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        // Ha offline vagyunk, megnézzük van-e a cache-ben
-        return caches.match(event.request)
-          .then(cached => {
-            if (cached) {
-              return cached;
-            }
-            
-            // Ha nincs a cache-ben, 404-et adunk vissza
-            return new Response('Resource not available offline', { 
-              status: 404, 
-              headers: new Headers({ 'Content-Type': 'text/plain' }) 
-            });
-          });
-      })
-  );
-});
-
-// OPCIONÁLIS: Előre betöltjük a fontosabb oldalakat amikor van hálózat
-self.addEventListener('push', event => {
-  if (event.data) {
-    // Push üzenet esetén betöltjük az oldalakat
-    caches.open(CACHE_NAME).then(cache => {
-      // Előre betöltjük a kezdőoldalakat
-      const pagesToPreload = PAGE_ASSETS.slice(0, 21); // Első 20 oldal + borító
-      
-      pagesToPreload.forEach(url => {
-        fetch(url)
-          .then(response => {
-            if (response.ok) {
-              cache.put(url, response);
-            }
-          })
-          .catch(() => {/* Csendes hiba */});
-      });
-    });
-  }
-});
-
-// OPCIONÁLIS: Amikor a felhasználó újra online lesz, frissítünk bizonyos erőforrásokat
-self.addEventListener('sync', event => {
-  if (event.tag === 'update-cache') {
-    event.waitUntil(
-      caches.open(CACHE_NAME).then(cache => {
-        // Frissítjük a kritikus erőforrásokat
-        CRITICAL_ASSETS.forEach(url => {
-          fetch(url)
-            .then(response => {
-              if (response.ok) {
-                cache.put(url, response);
-              }
-            })
-            .catch(() => {/* Csendes hiba */});
+          return networkResponse;
+        }).catch(error => {
+            console.warn('[SW Fetch] Google Font hálózati hiba:', event.request.url, error);
+            // Hiba esetén nincs mit visszaadni (esetleg egy alap fontot lehetne?)
+            return new Response('Google Fonts not available', { status: 503 });
         });
       })
     );
+    return;
   }
+
+  // 3. Navigációs kérések (a fő index.html-re vagy a gyökérre) - Hálózat először, majd cache, offline fallback
+  // Ez biztosítja, hogy a felhasználó mindig a legfrissebb alkalmazás héjat kapja, ha online van.
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Ha sikeres, gyorsítótárazzuk a legfrissebbet
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => {
+          // Ha a hálózat nem elérhető, próbáljuk a cache-ből
+          return caches.match(event.request).then(cachedResponse => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // Ha a cache-ben sincs, adjuk vissza az offline.html-t
+            return caches.match('offline.html');
+          });
+        })
+    );
+    return;
+  }
+
+  // 4. Minden egyéb kérés (JS, CSS, Képek, Hangok, pages-data.js, manifest.json stb.) - Cache first, majd network
+  // Ez gyors betöltést biztosít offline és online is, ha már van cache-elt verzió.
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      if (cachedResponse) {
+        // console.log('[SW Fetch] Cache-ből:', event.request.url);
+        // Opcionális: Háttérben frissíthetjük a cache-t (stale-while-revalidate)
+        // fetch(event.request).then(networkResponse => {
+        //   if (networkResponse.ok) {
+        //      caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse));
+        //   }
+        // }).catch(() => {}); // Csendes hiba, ha a háttérfrissítés nem sikerül
+        return cachedResponse;
+      }
+
+      // Ha nincs a cache-ben, kérjük a hálózatról
+      // console.log('[SW Fetch] Hálózatról:', event.request.url);
+      return fetch(event.request).then(networkResponse => {
+        // Ha sikeres a válasz, tegyük be a cache-be
+        if (networkResponse.ok) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        } else {
+             // Ha a hálózati válasz hiba (pl. 404), azt is logolhatjuk
+             console.warn(`[SW Fetch] Hálózati hiba (${networkResponse.status}) a fájl lekérésekor: ${event.request.url}`);
+        }
+        return networkResponse;
+      }).catch(error => {
+          console.warn(`[SW Fetch] Hálózati hiba történt: ${event.request.url}`, error);
+          // Ha a kérés képre vonatkozott, esetleg visszaadhatnánk egy placeholder képet
+          // if (event.request.destination === 'image') return caches.match('/images/placeholder.png');
+          // Egyéb esetben nincs fallback, hibát adunk vissza
+           return new Response(`Network error fetching ${event.request.url}`, { status: 503 }); // Service Unavailable
+      });
+    })
+  );
 });
+
+
+// ----- Régi opcionális Sync és Push eventek (maradhatnak, ha használod őket) -----
+self.addEventListener('push', event => { /* ... */ });
+self.addEventListener('sync', event => { /* ... */ });
