@@ -1,0 +1,41 @@
+{
+  // Meglévő Functions beállítások
+  "functions": [
+    {
+      "source": "functions", // Feltételezve, hogy van 'functions' mappa a gyökérben
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+
+  // Hosting beállítások
+  "hosting": {
+    // Mivel a repository gyökere a publikus tartalom, '.'-ot használunk
+    "public": ".",
+
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+      // Esetleg ide veheted a functions mappát is, ha van: "functions/**"
+    ],
+
+    // Átirányítási szabályok (ezek változatlanok)
+    "rewrites": [
+      {
+        "source": "/pages/**",
+        "destination": "/index.html"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
