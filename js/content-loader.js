@@ -1,116 +1,372 @@
 /**
- * Tartalom betöltő szolgáltatás (SPA / JS Adat Verzió + Licenc Kód Beillesztés)
- * Ez a szolgáltatás felelős a könyv oldalainak biztonságos betöltéséért
- * a window.bookPageData objektumból, ellenőrzi a hozzáférést,
- * és beilleszti a licenc azonosítót.
+ * Tartalom betöltő szolgáltatás (MÓDOSÍTOTT Verzió)
+ * Ez a szolgáltatás felelős a könyv oldalainak biztonságos betöltéséért,
+ * ellenőrizve a hozzáférési jogosultságot minden egyes oldal betöltése előtt.
  */
 class ContentLoader {
   constructor() {
-    this.pages = {}; // Gyorsítótár a már RENDERELT oldalakhoz (opcionális)
-    this.renderCallback = null;
-    this.isInitialized = false; // Jelzi, hogy az alap PWA és az auth service kész-e
-    this.LAST_CODE_KEY = 'lastActivatedCode'; // Kulcs a kód kiolvasásához
+    this.pages = {}; // Gyorsítótár a betöltött oldalakhoz
+    this.renderCallback = null; // Visszahívás függvény az oldalak megjelenítéséhez
+    this.isInitialized = false; // Jelzi, hogy a Firebase DB kapcsolat létrejött-e
 
-    this._waitForDependencies();
+    // Inicializálást késleltetjük, amíg a Firebase betöltődik
+    this._initWhenFirebaseReady();
   }
 
-  _waitForDependencies() {
-    // Most már a bookPageData elérhetőségére is várunk
-    if (window.authTokenService && window.authService && typeof window.bookPageData !== 'undefined') {
-        this.isInitialized = true;
-        console.log('[ContentLoader] Függőségek (AuthTokenService, AuthService, bookPageData) elérhetőek.');
-         console.log(`[ContentLoader] Oldal adat (bookPageData) sikeresen betöltve, ${Object.keys(window.bookPageData).length} oldal található.`);
-        this._initWhenFirebaseReady(); // Firebase kapcsolatot is megpróbáljuk inicializálni (Authhoz kellhet)
+  /**
+   * Inicializálás, amikor a Firebase elérhető
+   */
+  _initWhenFirebaseReady() {
+    // Ellenőrizzük, hogy a window.firebaseApp már létezik-e
+    if (window.firebaseApp && window.firebaseApp.db) { // Csak a db kell neki
+      this._initWithFirebase();
     } else {
-      if (typeof window.bookPageData === 'undefined') {
-          console.log('[ContentLoader] Várakozás a bookPageData betöltődésére...');
-      } else {
-          console.log('[ContentLoader] Várakozás az Auth szolgáltatásokra...');
-      }
-      setTimeout(() => this._waitForDependencies(), 300);
+      // Ha még nem, várunk egy rövid ideig és újra próbáljuk
+      console.log('[ContentLoader] Várakozás a Firebase inicializálására...');
+      setTimeout(() => this._initWhenFirebaseReady(), 500);
     }
   }
 
-   // Az eredeti Firebase init logika itt marad, bár a DB-t nem használjuk aktívan a betöltéshez
-   _initWhenFirebaseReady() { /* ... (Változatlan) ... */ if(window.firebaseApp&&window.firebaseApp.db){this._initWithFirebase();}else{console.log("[ContentLoader] Várakozás Firebase init-re...");setTimeout(()=>this._initWhenFirebaseReady(),500);} }
-   _initWithFirebase() { /* ... (Változatlan) ... */ try{this.db=window.firebaseApp.db;console.log("[ContentLoader] Firebase DB init OK.");}catch(e){console.error('[ContentLoader] Firebase init hiba:',e);} }
+  /**
+   * Inicializálás a Firebase-szel
+   */
+  _initWithFirebase() {
+    try {
+      this.db = window.firebaseApp.db;
+      // Figyelem: A this.auth itt nem szükséges, kivéve ha a jövőben kellene
+      this.isInitialized = true;
+      console.log('[ContentLoader] Inicializálva Firebase DB-vel');
+    } catch (error) {
+      console.error('[ContentLoader] Hiba a Firebase inicializálásakor:', error);
+    }
+  }
 
-
+  /**
+   * Beállítás
+   * @param {Function} renderCallback - Függvény, ami megjeleníti az oldalakat
+   */
   setup(renderCallback) {
     this.renderCallback = renderCallback;
     console.log('[ContentLoader] Beállítva renderCallback-kel');
   }
 
   /**
-   * Tartalom betöltése a window.bookPageData objektumból - ÚJ VERZIÓ
+   * Tartalom betöltése (ez a fő belépési pont)
    * @param {string} pageId - Az oldal azonosítója (pl. "1", "2", "borito")
    * @returns {Promise<boolean>} - Sikeres volt-e a betöltés
    */
   async loadContent(pageId) {
     console.log(`[ContentLoader] Tartalom betöltése megkezdve: ${pageId}`);
-    pageId = String(pageId); // Biztosítjuk, hogy string
 
-    if (!this.isInitialized) { /* ... (Hibaellenőrzés változatlan) ... */ console.error(`[ContentLoader] Nincs inicializálva. Betöltés megszakítva: ${pageId}`); if(this.renderCallback)this._renderGenericErrorPage(pageId,"Init hiba."); return false; }
-    if (typeof window.bookPageData === 'undefined') { /* ... (Hibaellenőrzés változatlan) ... */ console.error(`[ContentLoader] bookPageData nem elérhető. Betöltés megszakítva: ${pageId}`); if(this.renderCallback)this._renderGenericErrorPage(pageId,"Adatfájl hiba."); return false; }
-
-    const pageNum = parseInt(pageId, 10);
-    const INGYENES_OLDAL_LIMIT = 2; // <<--- !!! Állítsd be a helyes limitet !!!
-    const isFreePage = pageId === 'borito' || (!isNaN(pageNum) && pageNum <= INGYENES_OLDAL_LIMIT);
-
-    if (!isFreePage) { /* ... (Jogosultság ellenőrzés változatlan) ... */
+    // Ellenőrizzük a jogosultságot, MIELŐTT bármit csinálnánk
+    // (kivéve a borítót, amihez nem kell jogosultság)
+    if (pageId !== 'borito') {
         const hasAccess = await this._hasAccessToPage(pageId);
-        if (!hasAccess) { console.warn(`[ContentLoader] Nincs jogosultság: ${pageId}.`); this._renderErrorPage(pageId); return false; }
-        console.log(`[ContentLoader] Jogosultság OK: ${pageId}`);
-    } else { console.log(`[ContentLoader] Ingyenes oldal: ${pageId}`); }
+        if (!hasAccess) {
+            console.warn(`[ContentLoader] Nincs jogosultság az oldalhoz: ${pageId}. Hibaoldal megjelenítése.`);
+            this._renderErrorPage(pageId); // Megjelenítjük a hibaoldalt
+            return false; // Nincs jogosultság, nem töltünk be semmit
+        }
+        console.log(`[ContentLoader] Jogosultság rendben az oldalhoz: ${pageId}`);
+    } else {
+        console.log(`[ContentLoader] Borító betöltése, jogosultság nem szükséges.`);
+    }
 
+
+    // Ha már be van töltve a gyorsítótárban, onnan szolgáljuk ki
+    // (A jogosultságot már fent ellenőriztük)
+    if (this.pages[pageId]) {
+      console.log(`[ContentLoader] Oldal betöltése cache-ből: ${pageId}`);
+      this._renderContent(pageId, this.pages[pageId]);
+      return true;
+    }
+
+    // Ha nincs cache-elve, megpróbáljuk betölteni (jogosultság már oké)
     try {
-      // Tartalom kikeresése a globális objektumból
-      const htmlContent = window.bookPageData[pageId];
-
-      if (typeof htmlContent === 'string') {
-        console.log(`[ContentLoader] Tartalom kikeresve innen: bookPageData[${pageId}]`);
-
-        // ---- Licenc ID beillesztése ----
-        let finalHtmlContent = htmlContent;
-        try {
-          const activationCode = localStorage.getItem(this.LAST_CODE_KEY);
-          if (activationCode) {
-              let licenseInfo = `Licenc: ${activationCode}`;
-              const closingBodyTag = /<\/body>/i;
-              if (closingBodyTag.test(finalHtmlContent)) {
-                 const footerDiv = `<div style="position:fixed; bottom:2px; left:5px; font-size:7px; color:grey; opacity:0.4; z-index: 1; pointer-events:none; background: rgba(0,0,0,0.1); padding: 1px 3px; border-radius: 2px;">${licenseInfo}</div>`;
-                 finalHtmlContent = finalHtmlContent.replace(closingBodyTag, `${footerDiv}\n</body>`);
-              } else { finalHtmlContent += `<span style="font-size:7px; color:grey; opacity:0.4;">${licenseInfo}</span>`; }
-          }
-        } catch (licenseError) { console.error(`[ContentLoader] Licenc infó hiba (${pageId}):`, licenseError); }
-        // ---- VÉGE: Licenc ID beillesztése ----
-
-        this._renderContent(pageId, finalHtmlContent);
+      // Először megpróbáljuk a helyi fájlból betölteni
+      const content = await this._loadFromFileAttempt(pageId);
+      if (content) {
+        this.pages[pageId] = content; // Gyorsítótárazás
+        this._renderContent(pageId, content);
         return true;
+      }
 
-      } else { /* ... (Hiba: oldal nem található) ... */ console.error(`[ContentLoader] Oldal ID nem található: '${pageId}'`); this._renderGenericErrorPage(pageId, `A(z) ${pageId}. oldal tartalma nem található.`); return false; }
-    } catch (error) { /* ... (Váratlan hiba) ... */ console.error(`[ContentLoader] Váratlan hiba (${pageId}):`, error); this._renderGenericErrorPage(pageId, 'Hiba a tartalom feldolgozása közben.'); return false; }
+      // Ha helyi betöltés nem sikerült, megpróbáljuk a Firebase-ből
+      // (Csak akkor, ha a DB kapcsolat inicializálva van)
+      if (this.isInitialized) {
+        const firebaseContent = await this._loadFromFirebaseAttempt(pageId);
+        if (firebaseContent) {
+          this.pages[pageId] = firebaseContent; // Gyorsítótárazás
+          this._renderContent(pageId, firebaseContent);
+          return true;
+        }
+      } else {
+          console.warn(`[ContentLoader] Firebase DB még nem inicializált, Firebase betöltési kísérlet kihagyva: ${pageId}`);
+      }
+
+      // Ha egyik forrásból sem sikerült betölteni (és jogosultságunk volt)
+      console.error(`[ContentLoader] Nem sikerült betölteni a tartalmat egyik forrásból sem: ${pageId}`);
+      // Itt egy általánosabb hibaoldalt jeleníthetünk meg, ami nem a jogosultságra utal
+      this._renderGenericErrorPage(pageId, 'A tartalom átmenetileg nem elérhető.');
+      return false;
+
+    } catch (error) {
+      console.error(`[ContentLoader] Váratlan hiba az oldal betöltésekor (${pageId}):`, error);
+       this._renderGenericErrorPage(pageId, 'Váratlan hiba történt a tartalom betöltése közben.');
+      return false;
+    }
   }
 
-  // Jogosultság ellenőrző (_hasAccessToPage) - Eredeti logika változatlan
-  async _hasAccessToPage(pageId) { /* ... (Változatlan az eredetihez képest) ... */
-    if (pageId === 'borito') return true; const pageNum = parseInt(pageId, 10); const INGYENES_OLDAL_LIMIT = 2; const isEarlyPage = !isNaN(pageNum) && pageNum <= INGYENES_OLDAL_LIMIT; if(isEarlyPage) return true; if (!window.authTokenService) { console.error('[ContentLoader] KRITIKUS HIBA: AuthTokenService nem elérhető!'); return false; } try { const token = window.authTokenService.getAccessToken(); if(token){return true;} else { console.warn(`[ContentLoader] Nincs érvényes token: ${pageId}.`); return false; } } catch (error) { console.error('[ContentLoader] Hiba a token ellenőrzésekor:', error); return false; }
-   }
+  /**
+   * Helyi fájlból való betöltési KÍSÉRLET (jogosultság már ellenőrizve)
+   * @param {string} pageId - Az oldal azonosítója
+   * @returns {Promise<string|null>} - A betöltött tartalom vagy null
+   */
+  async _loadFromFileAttempt(pageId) {
+    try {
+      const pagePath = pageId === 'borito' ? 'pages/borito.html' : `pages/${pageId}.html`;
+      console.log(`[ContentLoader] Helyi fájl betöltési kísérlet: ${pagePath}`);
 
-  // Tartalom megjelenítése (_renderContent) - Eredeti logika változatlan
-  _renderContent(pageId, content) { /* ... (Változatlan az eredetihez képest) ... */
-    if (this.renderCallback) { try { const c = typeof content === 'string' ? content : ''; if(typeof content !== 'string') console.warn(`Tartalom nem string (${pageId})`); this.renderCallback(pageId, c); } catch (renderError) { console.error(`Render callback hiba (${pageId}):`, renderError); this._renderGenericErrorPage(pageId, 'Hiba az oldal megjelenítésekor.'); } } else { console.error('[ContentLoader] Nincs renderCallback!'); }
-   }
+      const response = await fetch(pagePath);
+      if (!response.ok) {
+        // Ha a fájl nem található (404) vagy más hiba van, az nem feltétlenül végzetes hiba,
+        // lehet, hogy csak Firebase-ből érhető el. Ezért csak figyelmeztetést logolunk.
+        console.warn(`[ContentLoader] Helyi fájl nem található vagy hiba (${response.status}): ${pagePath}`);
+        return null; // Jelzi, hogy nem sikerült innen betölteni
+      }
 
-  // Hibaoldalak (_renderErrorPage, _renderGenericErrorPage) - Eredeti logika változatlan
-  _renderErrorPage(pageId) { /* ... (Változatlan az eredetihez képest) ... */
-    console.log(`[ContentLoader] Jogosultsági hibaoldal: ${pageId}`); const ec = `<!DOCTYPE html><html lang="hu"><head><meta charset="utf-8"><title>Hozzáférés Megtagadva</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:'Roboto',sans-serif;text-align:center;padding:40px;background-color:#1a1a1a;color:#e0e0e0;margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;box-sizing:border-box;}.error-container{max-width:500px;margin:0 auto;background-color:#2c2c2c;padding:30px;border-radius:10px;box-shadow:0 0 15px rgba(0,0,0,0.5);}h1{color:#ff6b6b;margin-bottom:15px;font-size:24px;}p{margin-bottom:20px;font-size:16px;line-height:1.6;}ul{text-align:left;display:inline-block;margin-bottom:20px;padding-left:20px;}li{margin-bottom:8px;}</style></head><body><div class="error-container"><h1>Hozzáférés Megtagadva</h1><p>Sajnáljuk, de ehhez a tartalomhoz nincs érvényes hozzáférésed...</p><ul><li>Nincs aktiválva a kód.</li><li>Lejárt a munkamenet.</li><li>Hálózati hiba.</li></ul><p>Próbáld újra aktiválni, vagy ellenőrizd a kapcsolatot.</p></div></body></html>`; this._renderContent(pageId, ec);
-   }
-  _renderGenericErrorPage(pageId, message = 'Ismeretlen hiba történt.') { /* ... (Változatlan az eredetihez képest) ... */
-     console.log(`[ContentLoader] Általános hibaoldal: ${pageId}`); const ec = `<!DOCTYPE html><html lang="hu"><head><meta charset="utf-8"><title>Hiba</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:'Roboto',sans-serif;text-align:center;padding:40px;background-color:#1a1a1a;color:#e0e0e0;margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;box-sizing:border-box;}.error-container{max-width:500px;margin:0 auto;background-color:#2c2c2c;padding:30px;border-radius:10px;box-shadow:0 0 15px rgba(0,0,0,0.5);}h1{color:#ffcc00;margin-bottom:15px;font-size:24px;}p{margin-bottom:20px;font-size:16px;line-height:1.6;}.message{font-style:italic;color:#aaaaaa;margin-bottom:25px;}</style></head><body><div class="error-container"><h1>Hoppá, Hiba Történt!</h1><p>A kért tartalom betöltése sikertelen.</p><p class="message">Részletek: ${message}</p><p>Próbáld meg később, vagy lépj vissza.</p></div></body></html>`; this._renderContent(pageId, ec);
+      const content = await response.text();
+      console.log(`[ContentLoader] Helyi fájl sikeresen betöltve: ${pagePath}`);
+      return content;
+    } catch (error) {
+      // Hálózati vagy egyéb hiba esetén is csak figyelmeztetünk
+      console.warn(`[ContentLoader] Hiba a helyi fájl betöltésekor (${pageId}):`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Firebase-ből való betöltési KÍSÉRLET (jogosultság már ellenőrizve)
+   * @param {string} pageId - Az oldal azonosítója
+   * @returns {Promise<string|null>} - A betöltött tartalom vagy null
+   */
+  async _loadFromFirebaseAttempt(pageId) {
+    if (!this.isInitialized || !this.db) {
+        console.warn("[ContentLoader] Firebase DB nem inicializált (loadFromFirebaseAttempt).");
+        return null;
+    }
+
+    try {
+      console.log(`[ContentLoader] Firebase-ből oldal lekérési kísérlet: pages/${pageId}`);
+      const docRef = this.db.collection('pages').doc(pageId); // Feltételezzük, hogy van 'pages' kollekció
+      const doc = await docRef.get();
+
+      if (doc.exists) {
+        const data = doc.data();
+        // Feltételezzük, hogy a tartalom a 'content' mezőben van
+        if (data && data.content) {
+             console.log(`[ContentLoader] Firebase-ből oldal sikeresen betöltve: ${pageId}`);
+             return data.content;
+        } else {
+            console.warn(`[ContentLoader] Oldal létezik Firebase-ben, de hiányzik a 'content' mező: ${pageId}`);
+            return null;
+        }
+      } else {
+        console.warn(`[ContentLoader] Az oldal nem található a Firebase 'pages' kollekcióban: ${pageId}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`[ContentLoader] Firebase betöltés hiba (${pageId}):`, error);
+      return null;
+    }
+  }
+
+
+  /**
+   * Jogosultság ellenőrzése egy oldalhoz (MÓDOSÍTOTT Verzió)
+   * Ez a funkció már a biztonságos, szerver oldali tokent használó
+   * authTokenService-re támaszkodik.
+   * @param {string} pageId - Az oldal azonosítója
+   * @returns {Promise<boolean>} - Van-e jogosultság
+   */
+  async _hasAccessToPage(pageId) {
+    // A borító mindig elérhető, nincs szükség ellenőrzésre
+    if (pageId === 'borito') {
+        // console.log("[ContentLoader] Borító - Hozzáférés engedélyezve (nincs ellenőrzés).");
+        return true;
+    }
+
+    // Demo mód: Az első néhány oldal elérhető lehet token nélkül is
+    // Ezt a részt igény szerint módosíthatod vagy kiveheted
+    const pageNum = parseInt(pageId, 10);
+    const isEarlyPage = !isNaN(pageNum) && pageNum <= 2; // Pl. csak az 1. és 2. oldalig engedünk ingyenes hozzáférést
+
+    // Ellenőrizzük, hogy az authTokenService elérhető-e
+    if (!window.authTokenService) {
+      console.error('[ContentLoader] KRITIKUS HIBA: Az AuthTokenService nem elérhető! Hozzáférés megtagadva.');
+      // Ebben az esetben csak a demó oldalakhoz engedünk hozzáférést
+      return isEarlyPage;
+    }
+
+    try {
+      // Token lekérése a szolgáltatástól (ez már nem async hívás!)
+      // A getAccessToken() a memóriából vagy localStorage-ból olvassa a *már megszerzett* tokent.
+      const token = window.authTokenService.getAccessToken();
+
+      if (token) {
+        // Van érvényes tokenünk a tárolóban.
+        // Itt lehetne akár egy extra szerver oldali validálást is beépíteni,
+        // ami ellenőrzi a token aláírását és nem csak a meglétét/lejáratát.
+        // De egyelőre elfogadjuk, ha a token létezik és nem járt le (ezt az authTokenService ellenőrzi).
+        // console.log(`[ContentLoader] Érvényes token található az oldalhoz: ${pageId}`);
+        return true; // Van jogosultság
+      } else {
+        // Nincs érvényes token a tárolóban
+        console.warn(`[ContentLoader] Nincs érvényes token az oldal megtekintéséhez: ${pageId}`);
+        // Ha nincs token, csak a demó oldalakhoz adunk hozzáférést
+        if (isEarlyPage) {
+             console.log(`[ContentLoader] Demó oldal (${pageId}), hozzáférés engedélyezve token nélkül.`);
+             return true;
+        } else {
+            console.warn(`[ContentLoader] Védett oldal (${pageId}), hozzáférés megtagadva token hiányában.`);
+            return false; // Nincs jogosultság a védett tartalomhoz
+        }
+      }
+
+    } catch (error) {
+      // Hiba a token lekérése vagy ellenőrzése közben
+      console.error('[ContentLoader] Hiba a token ellenőrzésekor:', error);
+      return false; // Hiba esetén nincs hozzáférés
+    }
+  }
+
+
+  /**
+   * Tartalom megjelenítése a renderCallback segítségével
+   * @param {string} pageId - Az oldal azonosítója
+   * @param {string} content - A megjelenítendő tartalom
+   */
+  _renderContent(pageId, content) {
+    if (this.renderCallback) {
+      try {
+        this.renderCallback(pageId, content);
+        // console.log(`[ContentLoader] Tartalom sikeresen átadva renderelésre: ${pageId}`);
+      } catch (renderError) {
+          console.error(`[ContentLoader] Hiba a renderCallback végrehajtása közben (${pageId}):`, renderError);
+          // Itt is megjeleníthetnénk egy általános hibaoldalt
+          this._renderGenericErrorPage(pageId, 'Hiba történt az oldal megjelenítése közben.');
+      }
+    } else {
+      console.error('[ContentLoader] Nincs beállítva renderCallback függvény!');
+      // Callback nélkül nem tudjuk megjeleníteni
+    }
+  }
+
+  /**
+   * Jogosultsági Hibaoldal megjelenítése
+   * Akkor hívódik, ha a _hasAccessToPage false-t ad vissza védett tartalomnál.
+   * @param {string} pageId - Az oldal azonosítója
+   */
+  _renderErrorPage(pageId) {
+    console.log(`[ContentLoader] Jogosultsági hibaoldal megjelenítése: ${pageId}`);
+    const errorContent = `
+    <!DOCTYPE html>
+    <html lang="hu">
+    <head>
+      <meta charset="utf-8">
+      <title>Hozzáférés Megtagadva</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+      <style>
+        body { font-family: 'Roboto', sans-serif; text-align: center; padding: 40px; background-color: #1a1a1a; color: #e0e0e0; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .error-container { max-width: 500px; margin: 0 auto; background-color: #2c2c2c; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        h1 { color: #ff6b6b; margin-bottom: 15px; font-size: 24px; }
+        p { margin-bottom: 20px; font-size: 16px; line-height: 1.6; }
+        ul { text-align: left; display: inline-block; margin-bottom: 20px; padding-left: 20px;}
+        li { margin-bottom: 8px; }
+        .button { display: inline-block; padding: 12px 25px; background-color: #7f00ff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s; border: none; cursor: pointer; font-size: 16px; }
+        .button:hover { background-color: #9b30ff; }
+      </style>
+    </head>
+    <body>
+      <div class="error-container">
+        <h1>Hozzáférés Megtagadva</h1>
+        <p>Sajnáljuk, de ehhez a tartalomhoz nincs érvényes hozzáférésed. Lehetséges okok:</p>
+        <ul>
+          <li>Nem aktiváltad még a könyvet a megvásárolt kóddal ezen az eszközön.</li>
+          <li>Az aktivációs munkameneted lejárt (általában 30 perc után).</li>
+          <li>Sikeres aktiválás után nem sikerült lekérni a hozzáférési kulcsot a szervertől.</li>
+          <li>Internetkapcsolati hiba az ellenőrzés során.</li>
+        </ul>
+        <p>Kérjük, próbáld meg újra aktiválni a könyvet a főoldalon (ha van rá lehetőség), vagy ellenőrizd az internetkapcsolatodat.</p>
+        </div>
+    </body>
+    </html>
+    `;
+
+    this._renderContent(pageId, errorContent);
+  }
+
+   /**
+    * Általános Hibaoldal megjelenítése
+    * Akkor hívódik, ha a tartalom betöltése sikertelen volt (de a jogosultság rendben volt).
+    * @param {string} pageId - Az oldal azonosítója
+    * @param {string} [message] - Opcionális üzenet a hiba okáról
+    */
+   _renderGenericErrorPage(pageId, message = 'Ismeretlen hiba történt.') {
+     console.log(`[ContentLoader] Általános hibaoldal megjelenítése: ${pageId}`);
+     const errorContent = `
+     <!DOCTYPE html>
+     <html lang="hu">
+     <head>
+       <meta charset="utf-8">
+       <title>Hiba</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+       <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+       <style>
+         body { font-family: 'Roboto', sans-serif; text-align: center; padding: 40px; background-color: #1a1a1a; color: #e0e0e0; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+         .error-container { max-width: 500px; margin: 0 auto; background-color: #2c2c2c; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+         h1 { color: #ffcc00; margin-bottom: 15px; font-size: 24px; }
+         p { margin-bottom: 20px; font-size: 16px; line-height: 1.6; }
+         .message { font-style: italic; color: #aaaaaa; margin-bottom: 25px; }
+         .button { display: inline-block; padding: 12px 25px; background-color: #7f00ff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s; border: none; cursor: pointer; font-size: 16px; }
+         .button:hover { background-color: #9b30ff; }
+       </style>
+     </head>
+     <body>
+       <div class="error-container">
+         <h1>Hoppá, Hiba Történt!</h1>
+         <p>Sajnáljuk, de a kért tartalom betöltése közben hiba lépett fel.</p>
+         <p class="message">${message}</p>
+         <p>Kérjük, próbáld meg később újra betölteni az oldalt, vagy lépj vissza.</p>
+         </div>
+     </body>
+     </html>
+     `;
+
+     this._renderContent(pageId, errorContent);
    }
 
 } // <-- ContentLoader osztály vége
 
-// Globális példány létrehozása (Változatlan)
-if (window.firebaseApp) { window.contentLoader = new ContentLoader(); } else { /* ... (Változatlan) ... */ console.warn("[ContentLoader] Várakozás window.firebaseApp-ra..."); const ci=setInterval(()=>{if(window.firebaseApp&&window.authService&&window.authTokenService){ if(typeof window.bookPageData!=='undefined'){ clearInterval(ci); window.contentLoader=new ContentLoader(); console.log("[ContentLoader] Globális példány létrehozva."); }else if(!document.querySelector('script[src*="pages-data.js"]')){ clearInterval(ci); console.error("[ContentLoader] HIBA: pages-data.js nincs betöltve!"); }else{ console.log("[ContentLoader] Várakozás bookPageData-ra..."); } } },100); setTimeout(()=>{if(!window.contentLoader){clearInterval(ci);console.error("[ContentLoader] Időtúllépés!");}},8000); }
+// Globális példány létrehozása (biztosítva, hogy a config már létezik)
+if (window.firebaseApp) {
+    window.contentLoader = new ContentLoader();
+} else {
+    // Ha a firebase-config.js később töltődne be, ez a késleltetés segíthet
+    console.warn("[ContentLoader] Várakozás a window.firebaseApp elérhetőségére...");
+    const checkLoaderInterval = setInterval(() => {
+        if (window.firebaseApp) {
+            clearInterval(checkLoaderInterval);
+            window.contentLoader = new ContentLoader();
+            console.log("[ContentLoader] Globális példány létrehozva késleltetéssel.");
+        }
+    }, 100);
+     // Időtúllépés hozzáadása, hogy ne várjon örökké
+    setTimeout(() => {
+        if (!window.contentLoader) {
+            clearInterval(checkLoaderInterval);
+            console.error("[ContentLoader] Időtúllépés: window.firebaseApp nem lett elérhető!");
+        }
+    }, 5000); // 5 másodperc várakozás
+}

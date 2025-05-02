@@ -24,20 +24,132 @@
   <meta property="og:image" content="./files/icon-512.png">
 
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000000; font-family: 'Cinzel', serif; }
-    #book-container { width: 100%; height: 100vh; overflow: hidden; position: relative; background-color: #000000; }
-    #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
-    #loading-screen img { /* stilus */ }
-    #install-banner { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #368B27; color: white; text-align: center; padding: 0.75rem; font-family: 'Roboto', sans-serif; font-weight: 600; font-size: 1rem; line-height: 1.4; z-index: 10000; box-shadow: 0 2px 5px rgba(0,0,0,0.3); cursor: pointer; text-transform: uppercase; box-sizing: border-box; }
-    #install-banner small { display: block; margin-top: 0.25rem; font-weight: 400; font-size: 0.85em; opacity: 0.8; text-transform: none; }
-    @media (max-width: 768px) { #install-banner { font-size: 1.125rem; padding: 1rem; } }
-    @media (min-width: 1200px) { #install-banner { font-size: 0.9rem; } }
-    .controls-container { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 999; display: flex; justify-content: center; align-items: center; gap: 15px; background-color: rgba(0, 0, 0, 0.3); padding: 8px 0; box-sizing: border-box; }
-    .control-button { background-color: rgba(50, 50, 50, 0.7); border: 1px solid rgba(255, 255, 255, 0.2); color: #e0e0e0; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; width: 40px; height: 40px; transition: background-color 0.3s, border-color 0.3s; }
-    .control-button:hover { background-color: rgba(80, 80, 80, 0.8); border-color: rgba(255, 255, 255, 0.5); }
-    .control-button svg { width: 20px; height: 20px; stroke: currentColor; }
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet"> <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000; /* Háttér fekete */
+      font-family: 'Cinzel', serif; /* Alapértelmezett betűtípus */
+    }
+
+    #book-container {
+      width: 100%;
+      height: 100vh; /* Teljes nézetablak magasság */
+      overflow: hidden;
+      position: relative;
+      background-color: #000000; /* Konténer háttere is fekete */
+    }
+
+    /* Betöltő képernyő */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000; /* Fekete háttér */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+
+    /* Loader kép stílusa (ha képet használsz) */
+    #loading-screen img {
+       /* Itt adhatsz meg extra stílusokat a képnek, ha kell */
+       /* Pl. max-width: 80px; */
+    }
+
+    /* Telepítési banner */
+    #install-banner {
+      display: none; /* Alapból rejtett */
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      background: #368B27; /* Zöld háttér */
+      color: white;
+      text-align: center;
+      padding: 0.75rem;
+      font-family: 'Roboto', sans-serif; /* Roboto betűtípus a bannerhez */
+      font-weight: 600;
+      font-size: 1rem;
+      line-height: 1.4;
+      z-index: 10000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      cursor: pointer;
+      text-transform: uppercase;
+      box-sizing: border-box; /* Padding beleszámít a szélességbe */
+    }
+
+    /* Az alsó instrukció kisebbíthető */
+    #install-banner small {
+      display: block;
+      margin-top: 0.25rem;
+      font-weight: 400;
+      font-size: 0.85em;
+      opacity: 0.8;
+      text-transform: none; /* Nem kell nagybetűsnek lennie */
+    }
+
+    /* Média lekérdezések a reszponzivitáshoz (maradtak) */
+    @media (max-width: 768px) {
+      #install-banner {
+        font-size: 1.125rem;
+        padding: 1rem;
+      }
+    }
+    @media (min-width: 1200px) {
+      #install-banner {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Stílusok a Flipbook vezérlő gombjaihoz (áthelyezve flipbook-engine.ts-ből ide a jobb átláthatóságért) */
+    .controls-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 999; /* Alacsonyabb, mint a betöltő/aktivációs képernyő */
+        display: flex;
+        justify-content: center; /* Gombok középre */
+        align-items: center;
+        gap: 15px; /* Térköz a gombok között */
+        background-color: rgba(0, 0, 0, 0.3); /* Enyhén átlátszó háttér */
+        padding: 8px 0;
+        box-sizing: border-box;
+    }
+
+    .control-button {
+        background-color: rgba(50, 50, 50, 0.7); /* Sötétszürke gomb háttér */
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #e0e0e0; /* Világosszürke ikon */
+        padding: 8px;
+        border-radius: 50%; /* Kerek gombok */
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 40px; /* Fix méret */
+        height: 40px; /* Fix méret */
+        transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    .control-button:hover {
+        background-color: rgba(80, 80, 80, 0.8);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .control-button svg {
+        width: 20px; /* SVG ikon mérete */
+        height: 20px;
+        stroke: currentColor; /* Az ikon színe a gomb színét veszi fel */
+    }
+
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -45,16 +157,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js"></script>
 
-  <script src="js/firebase-config.js"></script>
-  <script src="js/auth-token-service.js"></script>
-  <script src="js/auth-service.js"></script>
-  <script src="js/activation-ui.js"></script>
-
-  <script src="js/pages-data.js"></script>
-
-  <script src="js/content-loader.js"></script>
-
-</head>
+  <script src="js/firebase-config.js"></script> <script src="js/auth-token-service.js"></script> <script src="js/auth-service.js"></script> <script src="js/activation-ui.js"></script> <script src="js/content-loader.js"></script> </head>
 <body>
 
   <div id="install-banner">
@@ -65,8 +168,7 @@
   </div>
 
   <div id="loading-screen">
-    <img src="images/homokora_loader.gif" alt="Betöltés..." width="60" height="60">
-  </div>
+    <img src="images/homokora_loader.gif" alt="Betöltés..." width="60" height="60"> </div>
 
   <div id="book-container">
     </div>
@@ -76,153 +178,185 @@
   <script src="flipbook-engine.js"></script>
 
   <script>
-    let flipbookInstance = null; // Globális referencia a flipbook motorhoz
-
-    // --- Oldal betöltése a hash alapján ---
-    function loadPageFromHash() {
-      // Várjuk meg, amíg minden betöltődik és inicializálódik
-      if (!window.contentLoader || !window.contentLoader.isInitialized || !flipbookInstance) {
-          console.log("loadPageFromHash: Várakozás a ContentLoader vagy FlipbookEngine inicializálására...");
-          // Itt nem hívjuk újra, a DOMContentLoaded gondoskodik az első hívásról,
-          // a hashchange listener pedig a későbbi eseményekről.
-          // Esetleg egy újrapróbálkozás lehetne, de bonyolítaná.
-          return;
-      }
-
-      let pageId = location.hash.substring(1); // # jel eltávolítása
-      console.log(`Hash változott vagy oldal betöltődött, hash: '${location.hash}', pageId: '${pageId}'`);
-
-      // Alapértelmezett oldal, ha nincs hash, vagy nem szám (kivéve 'borito')
-      // Aktivált állapotban az 1. oldalra, egyébként a borítóra.
-      // Ezt az ellenőrzést akár az activationUI is jelezhetné egy globális változóval.
-      if (!pageId || (isNaN(parseInt(pageId, 10)) && pageId !== 'borito')) {
-         // Itt ellenőrizhetnénk, hogy aktiválva van-e a user, pl. token alapján
-         const hasToken = window.authTokenService && window.authTokenService.getAccessToken();
-         pageId = hasToken ? '1' : 'borito'; // Ha van token -> 1. oldal, ha nincs -> borító
-         console.log(`Nincs érvényes hash, alapértelmezett oldal betöltése: ${pageId}`);
-         // Opcionális: Frissítsük a hash-t is, hogy az URL tükrözze az állapotot
-         // history.replaceState(null, '', `#${pageId}`); // Ez nem vált ki hashchange eseményt
-      }
-
-       // Tartalom betöltése a ContentLoaderrel
-       console.log(`Tartalom betöltése a ${pageId} azonosítóhoz...`);
-       window.contentLoader.loadContent(pageId).catch(err => {
-           console.error(`Hiba a contentLoader.loadContent hívásakor (${pageId}):`, err);
-           // Itt is megjeleníthetünk egy általános hibaüzenetet, ha a loader nem tette meg
-           if (flipbookInstance && typeof flipbookInstance._renderPage === 'function') { // Feltételezve, hogy van ilyen belső függvény
-                flipbookInstance._renderPage(pageId, `<h1>Hiba</h1><p>Az oldal betöltése sikertelen (${pageId}).</p>`);
-           }
-       });
-    }
-
-    // --- Globális funkció a lapozáshoz (iframe-ekből vagy JS-ből hívható) ---
-    function goToPage(pageNumber) {
-         const pageId = String(pageNumber); // Stringgé alakítás
-         console.log(`Globális goToPage hívva: ${pageId}. Hash beállítása...`);
-         // Egyszerűen beállítjuk a hash-t. A 'hashchange' eseménykezelő fogja intézni a betöltést.
-         location.hash = `#${pageId}`;
-     }
-
-    // --- Indítás a DOM betöltődése után ---
     document.addEventListener('DOMContentLoaded', async () => {
       const loadingScreen = document.getElementById('loading-screen');
       try {
-        // Várakozás a szükséges szolgáltatásokra (Auth, Token, ContentLoader, PageData)
-        // A ContentLoader constructor-a már vár ezekre, itt elég rá várni.
-         let checkCount = 0;
-         while (!window.contentLoader?.isInitialized && checkCount < 50) { // Max ~15 mp várakozás
-             console.log("DOMContentLoaded: Várakozás a ContentLoader inicializálására...");
-             await new Promise(resolve => setTimeout(resolve, 300));
-             checkCount++;
-         }
-
-         if (!window.contentLoader?.isInitialized) {
-             console.error("DOMContentLoaded: ContentLoader inicializálása időtúllépés!");
-             throw new Error("Alkalmazás komponensek nem töltődtek be időben.");
-         }
-         console.log("DOMContentLoaded: ContentLoader inicializálva.");
-
-        // Aktiváció ellenőrzése - Ez dönti el, hogy az aktiváló UI kell-e
-        console.log("DOMContentLoaded: ActivationUI inicializálása...");
-        const isActivated = await window.activationUI.initialize();
-        console.log(`DOMContentLoaded: ActivationUI initialize Befejeződött, eredmény (isActivated): ${isActivated}`);
-
-        // Flipbook Engine inicializálása MINDIG (még ha csak a hibaoldalt mutatja is)
-        // A tartalom betöltését majd a hash alapján intézzük
-        if (typeof FlipbookEngine !== 'undefined') {
-              console.log("DOMContentLoaded: FlipbookEngine inicializálása...");
-              flipbookInstance = new FlipbookEngine({
-                containerId: 'book-container',
-                // TotalPages itt talán nem is kell, ha a navigáció máshogy működik
-                // totalPages: 300, // Vagy a bookPageData hossza: Object.keys(window.bookPageData || {}).length
-                soundPath: 'sounds/pageturn-102978.mp3'
-                // FONTOS: A FlipbookEngine-nek szüksége van a renderCallback-re a ContentLoader-től!
-              });
-              // Beállítjuk a renderelési callback-et a ContentLoaderben
-              if (window.contentLoader && typeof flipbookInstance.renderPage === 'function') {
-                  window.contentLoader.setup(flipbookInstance.renderPage.bind(flipbookInstance));
-                  console.log("DOMContentLoaded: ContentLoader renderCallback beállítva a FlipbookEngine-re.");
-              } else {
-                   console.error("Hiba: Nem sikerült beállítani a renderCallback-et! Ellenőrizd a FlipbookEngine 'renderPage' metódusát.");
-              }
-              console.log("DOMContentLoaded: FlipbookEngine sikeresen inicializálva.");
-        } else {
-               console.error("Hiba: FlipbookEngine osztály nem található!");
+        // Megvárjuk, amíg az összes szükséges szolgáltatás inicializálódik
+        // (Egyszerű várakozás, lehetne kifinomultabb is)
+        while (!window.firebaseApp || !window.authService || !window.activationUI || !window.contentLoader || !window.authTokenService) {
+             console.log("Várakozás a szolgáltatások inicializálására...");
+             await new Promise(resolve => setTimeout(resolve, 100));
         }
+        console.log("Minden szolgáltatás inicializálva.");
 
-        // --- Kezdőoldal betöltése a hash alapján (vagy alapértelmezett) ---
-        loadPageFromHash();
 
-        // Betöltő képernyő elrejtése
-        if (loadingScreen) {
+        // Aktiváció ellenőrzése (ez hívja az authService.checkStoredAuth-t)
+        console.log("ActivationUI inicializálása...");
+        const isActivated = await window.activationUI.initialize();
+        console.log(`ActivationUI initialize Befejeződött, eredmény (isActivated): ${isActivated}`);
+
+        // Ha aktiválva van (van user ÉS érvényes token), akkor indítjuk a könyvet
+        if (isActivated) {
+          console.log("Aktivált állapot, FlipbookEngine inicializálása...");
+          // FlipbookEngine inicializálása
+          // Figyelem: Biztosítsd, hogy a FlipbookEngine osztály definíciója
+          // a flipbook-engine.js-ben van és be van töltve e script előtt!
+          if (typeof FlipbookEngine !== 'undefined') {
+              const flipbook = new FlipbookEngine({
+                containerId: 'book-container',
+                totalPages: 300, // Ezt állítsd be a tényleges oldalszámra
+                soundPath: 'sounds/pageturn-102978.mp3'
+              });
+              console.log("FlipbookEngine sikeresen inicializálva.");
+               // Globális hivatkozás létrehozása, ha szükséges a lapozáshoz linkekből
+               window.flipbookInstance = flipbook;
+          } else {
+               console.error("Hiba: FlipbookEngine osztály nem található!");
+               // Itt lehetne egy hibaüzenetet megjeleníteni a felhasználónak
+          }
+
+          // Betöltő képernyő elrejtése késleltetéssel
+          if (loadingScreen) {
             setTimeout(() => {
               loadingScreen.style.opacity = '0';
               setTimeout(() => {
                 if(loadingScreen) loadingScreen.style.display = 'none';
-              }, 500);
-            }, 500); // Kicsit gyorsabban, mint korábban
-        }
+              }, 500); // fade-out idő
+            }, 800); // Kis várakozás a tartalom betöltődése után
+          }
 
+        } else {
+          // Ha nincs aktiválva (nincs user vagy nincs token),
+          // akkor az activationUI már létrehozta a felületet az initialize() során.
+          // Csak a betöltő képernyőt kell elrejteni, hogy láthatóvá váljon.
+          console.log("Nem aktivált állapot, betöltő képernyő elrejtése az aktivációs UI megjelenítéséhez.");
+          if (loadingScreen) {
+            // Nincs szükség késleltetésre, azonnal elrejtjük
+            loadingScreen.style.opacity = '0';
+             setTimeout(() => {
+                if(loadingScreen) loadingScreen.style.display = 'none';
+             }, 500); // fade-out idő
+          }
+        }
       } catch (error) {
+        // Általános inicializálási hiba kezelése
         console.error('Kritikus hiba az alkalmazás inicializálása során:', error);
         if (loadingScreen) {
-            loadingScreen.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Hiba történt az alkalmazás indításakor. (${error.message})</p>`;
-             loadingScreen.style.opacity = '1';
+            loadingScreen.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Hiba történt az alkalmazás indításakor. Kérlek, próbáld meg később.</p>`;
+             loadingScreen.style.opacity = '1'; // Jelenítsük meg a hibaüzenetet
         }
+        // Esetleg itt megpróbálhatnánk törölni a tárolt adatokat, hogy tiszta lappal induljon legközelebb
+        // localStorage.clear(); sessionStorage.clear();
       }
     });
 
-    // --- Hash változás figyelése a navigációhoz ---
-    window.addEventListener('hashchange', loadPageFromHash);
+     // Globális funkció a lapozáshoz (iframe-ekből hívható)
+     function goToPage(pageNumber) {
+         console.log(`Globális goToPage hívva: ${pageNumber}`);
+         if (window.flipbookInstance) {
+             // Figyelem: a flipbookInstance.loadPage most már a jogosultság-ellenőrzött
+             // contentLoader-t használja a háttérben.
+             window.flipbookInstance.loadPage(pageNumber);
+         } else {
+             console.error("Flipbook instance nem elérhető a lapozáshoz!");
+         }
+     }
+
+     // Globális funkció a kocka widget megjelenítéséhez/elrejtéséhez
+     // (Ha a kocka JS a fő oldalon van, és nem az iframe-ben)
+     /*
+     function toggleDiceWidget() {
+         const widget = document.getElementById('dice-widget-container');
+         if (widget) {
+             widget.style.display = widget.style.display === 'none' ? 'block' : 'none';
+             // Itt lehetne a kockadobó logika inicializálása is
+         }
+     }
+     */
+     // Megjegyzés: Ha a kocka widgetek HTML/JS kódja az adott oldalak (iframe-ek)
+     // részét képezi, akkor ez a globális funkció nem szükséges itt.
 
   </script>
+
   <script>
-    let deferredPrompt;
+    let deferredPrompt; // Globális változó a prompt esemény tárolására
+
     window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault(); console.log('[InstallPrompt] beforeinstallprompt esemény érzékelve.');
+      // 1. Akadályozzuk meg az alapértelmezett mini-infobar megjelenését
+      e.preventDefault();
+      console.log('[InstallPrompt] beforeinstallprompt esemény érzékelve.');
+
+      // 2. Ellenőrizzük, hogy az app telepített módban fut-e már
       const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      if (isInStandaloneMode) { console.log('[InstallPrompt] Az app telepített (standalone) módban fut, banner nem jelenik meg.'); const ib = document.getElementById('install-banner'); if(ib) ib.style.display = 'none'; return; }
-      if (sessionStorage.getItem('installBannerShown')) { console.log('[InstallPrompt] A banner már megjelent ebben a munkamenetben.'); return; }
-      console.log('[InstallPrompt] Telepítési prompt eltárolva.'); deferredPrompt = e;
+      if (isInStandaloneMode) {
+        console.log('[InstallPrompt] Az app telepített (standalone) módban fut, banner nem jelenik meg.');
+        // Ha telepítve fut, elrejtjük a bannert, ha esetleg látható lenne
+         const installBanner = document.getElementById('install-banner');
+         if (installBanner) {
+             installBanner.style.display = 'none';
+         }
+        return; // Kilépünk, nem kell bannert mutatni
+      }
+
+      // 3. Ellenőrizzük, hogy ebben a munkamenetben már megmutattuk-e a bannert
+      if (sessionStorage.getItem('installBannerShown')) {
+        console.log('[InstallPrompt] A banner már megjelent ebben a munkamenetben, nem jelenítjük meg újra.');
+        return; // Kilépünk, nem mutatjuk meg újra
+      }
+
+      // 4. Ha nem telepített módban fut és még nem mutattuk meg -> Eltároljuk az eseményt későbbre
+      console.log('[InstallPrompt] Telepítési prompt eltárolva.');
+      deferredPrompt = e;
+
+      // 5. Megjelenítjük a saját bannerünket
       const installBanner = document.getElementById('install-banner');
-      if (installBanner) { console.log('[InstallPrompt] Telepítési banner megjelenítése.'); installBanner.style.display = 'block'; sessionStorage.setItem('installBannerShown', 'true'); }
-      else { console.error('[InstallPrompt] Az "install-banner" elem nem található!'); }
+      if (installBanner) {
+        console.log('[InstallPrompt] Telepítési banner megjelenítése.');
+        installBanner.style.display = 'block';
+        // Beállítunk egy jelzőt a sessionStorage-ben, hogy tudjuk, már megmutattuk
+        sessionStorage.setItem('installBannerShown', 'true');
+      } else {
+         console.error('[InstallPrompt] Az "install-banner" elem nem található!');
+      }
     });
+
+    // Bannerre kattintás kezelése
     const bannerElement = document.getElementById('install-banner');
     if (bannerElement) {
       bannerElement.addEventListener('click', async () => {
-        console.log('[InstallPrompt] Bannerre kattintás érzékelve.'); bannerElement.style.display = 'none';
-        if (!deferredPrompt) { console.log('[InstallPrompt] Nincs eltárolt prompt esemény.'); return; }
+        console.log('[InstallPrompt] Bannerre kattintás érzékelve.');
+        // Elrejtjük a bannert azonnal
+        bannerElement.style.display = 'none';
+
+        // Ellenőrizzük, hogy van-e eltárolt prompt eseményünk
+        if (!deferredPrompt) {
+          console.log('[InstallPrompt] Nincs eltárolt prompt esemény.');
+          return; // Ha nincs, nem tudunk mit tenni
+        }
+
+        // Megjelenítjük a böngésző telepítési párbeszédablakát
         try {
-          console.log('[InstallPrompt] Telepítési prompt megjelenítése...'); deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice; console.log(`[InstallPrompt] Felhasználó válasza a promptra: ${outcome}`);
+          console.log('[InstallPrompt] Telepítési prompt megjelenítése...');
+          deferredPrompt.prompt();
+          // Várjuk meg a felhasználó válaszát
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log(`[InstallPrompt] Felhasználó válasza a promptra: ${outcome}`);
+          // Akár 'accepted' (elfogadta), akár 'dismissed' (elvetette),
+          // a promptot felhasználtuk, töröljük a referenciát.
           deferredPrompt = null;
-        } catch (error) { console.error('[InstallPrompt] Hiba a telepítési prompt megjelenítése közben:', error); deferredPrompt = null; }
+        } catch (error) {
+           console.error('[InstallPrompt] Hiba a telepítési prompt megjelenítése közben:', error);
+           deferredPrompt = null; // Hiba esetén is töröljük
+        }
       });
-    } else { console.error('[InstallPrompt] Nem sikerült click eseménykezelőt hozzáadni: Az "install-banner" elem nem található!'); }
+    } else {
+         console.error('[InstallPrompt] Nem sikerült click eseménykezelőt hozzáadni: Az "install-banner" elem nem található!');
+    }
   </script>
+
   <script>
     if ('serviceWorker' in navigator) {
+      // Késleltetjük kicsit a regisztrációt, hogy a főbb JS fájlok betöltődjenek előbb
       window.addEventListener('load', () => {
           navigator.serviceWorker
             .register('./service-worker.js')
