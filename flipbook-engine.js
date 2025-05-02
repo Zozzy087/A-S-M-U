@@ -49,16 +49,6 @@ class FlipbookEngine {
         this.loadPage(0);
         // Navigációs gombok kezdeti beállítása
         this.updateNavigationVisibility();
-        
-        // Tartalom betöltő és token kezelő inicializálása
-        if (window.contentLoader) {
-          window.contentLoader.setup((pageId, content) => this._renderPage(pageId, content));
-        }
-
-        if (window.authTokenService) {
-          // Hozzáférési token inicializálása
-          window.authTokenService.getAccessToken();
-        }
     }
     /**
      * Flipbook konténer inicializálása
@@ -234,76 +224,43 @@ class FlipbookEngine {
             this.prevPage();
         }
     }
-    
-    // Eredeti oldalletöltő függvény mentése
-    _originalLoadPage(pageNumber) {
-        if (pageNumber < 0 || pageNumber > this.totalPages) return;
-        
+    /**
+     * Oldalbetöltés
+     */
+    loadPage(pageNumber) {
+        if (pageNumber < 0 || pageNumber > this.totalPages)
+            return;
         if (this.currentPageElement) {
             const pagePath = pageNumber === 0 ? 'pages/borito.html' : `pages/${pageNumber}.html`;
             this.currentPageElement.src = pagePath;
             this.currentPage = pageNumber;
-            
             // Beállítjuk a data-page attribútumot a body tag-en
             document.body.setAttribute('data-page', pageNumber.toString());
-            
             // Az iframe betöltése után állítsuk be a tartalom méretét
             this.currentPageElement.onload = () => {
+                var _a;
                 try {
-                    const iframeDoc = this.currentPageElement?.contentDocument;
+                    const iframeDoc = (_a = this.currentPageElement) === null || _a === void 0 ? void 0 : _a.contentDocument;
                     if (iframeDoc) {
                         // CSS szabály hozzáadása, hogy a tartalom ne érjen le a vezérlősávig
                         const style = iframeDoc.createElement('style');
                         style.textContent = `
-                          body {
-                            padding-bottom: 70px !important;
-                            box-sizing: border-box;
-                          }
-                        `;
+              body {
+                padding-bottom: 70px !important;
+                box-sizing: border-box;
+              }
+            `;
                         iframeDoc.head.appendChild(style);
                     }
-                } catch (e) {
+                }
+                catch (e) {
                     console.error('Nem sikerült módosítani az iframe tartalmát:', e);
                 }
             };
-            
             // Navigációs gombok frissítése
             this.updateNavigationVisibility();
         }
     }
-
-    // Új oldalletöltő függvény
-    loadPage(pageNumber) {
-        console.log(`loadPage hívva: ${pageNumber}`);
-        
-        // Ellenőrzés: érvényes oldalszám
-        if (pageNumber < 0 || pageNumber > this.totalPages) {
-            console.error(`Érvénytelen oldalszám: ${pageNumber}`);
-            return;
-        }
-        
-        // Ha van ContentLoader, azt használjuk (biztonságos)
-        if (window.contentLoader) {
-            const pageId = pageNumber === 0 ? 'borito' : pageNumber.toString();
-            console.log(`ContentLoader használata a betöltéshez: ${pageId}`);
-            window.contentLoader.loadContent(pageId)
-                .then(success => {
-                    // A loadContent után frissítjük a navigációs gombokat
-                    this.currentPage = pageNumber;
-                    this.updateNavigationVisibility();
-                    console.log(`Oldal betöltve ContentLoader-rel: ${pageId}, sikeres: ${success}`);
-                })
-                .catch(error => {
-                    console.error(`Hiba a ContentLoader használatakor: ${error}`);
-                });
-        } 
-        // Ellenkező esetben visszatérünk az eredeti betöltési logikához
-        else {
-            console.log(`Eredeti betöltési logika használata: ${pageNumber}`);
-            this._originalLoadPage(pageNumber);
-        }
-    }
-    
     /**
      * Következő oldalra lapozás
      */
@@ -399,15 +356,12 @@ class FlipbookEngine {
      * Navigációs menü megjelenítése
      */
     showNavigationMenu() {
-        console.log('Navigációs menü megjelenítése');
-        
         // Ellenőrizzük, hogy a navigációs menü már látható-e
         const existingMenu = document.querySelector('.navigation-menu');
         if (existingMenu) {
             existingMenu.remove();
             return;
         }
-        
         // Menü létrehozása
         const menu = document.createElement('div');
         menu.className = 'navigation-menu';
@@ -422,7 +376,6 @@ class FlipbookEngine {
         menu.style.padding = '15px';
         menu.style.zIndex = '10000';
         menu.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.5)';
-        
         // Menü cím
         const title = document.createElement('div');
         title.style.color = 'white';
@@ -432,7 +385,6 @@ class FlipbookEngine {
         title.style.textAlign = 'center';
         title.textContent = 'Navigáció';
         menu.appendChild(title);
-        
         // Fejezetek listázása
         this.chapters.forEach(chapter => {
             const item = document.createElement('div');
@@ -443,45 +395,32 @@ class FlipbookEngine {
             item.style.cursor = 'pointer';
             item.style.borderRadius = '5px';
             item.style.transition = 'background-color 0.2s';
-            
             // Jelenlegi oldal kiemelése
             if (this.currentPage === chapter.page) {
                 item.style.backgroundColor = 'rgba(127, 0, 255, 0.5)';
                 item.style.fontWeight = 'bold';
             }
-            
             item.textContent = `${chapter.title} (${chapter.page}. oldal)`;
-            
             // Kattintás eseménykezelő
             item.addEventListener('click', () => {
-                console.log(`Navigációs menüből oldal betöltése: ${chapter.page}`);
                 this.loadPage(chapter.page);
                 menu.remove();
-                
-                // Explicit beállítjuk az aktuális oldalt és frissítjük a navigációs gombokat
-                this.currentPage = chapter.page;
-                this.updateNavigationVisibility();
             });
-            
             // Hover effekt
             item.addEventListener('mouseenter', () => {
                 if (this.currentPage !== chapter.page) {
                     item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                 }
             });
-            
             item.addEventListener('mouseleave', () => {
                 if (this.currentPage !== chapter.page) {
                     item.style.backgroundColor = 'transparent';
                 }
             });
-            
             menu.appendChild(item);
         });
-        
         // Menü hozzáadása a dokumentumhoz
         document.body.appendChild(menu);
-        
         // Kattintás bárhová a menün kívül bezárja azt
         document.addEventListener('click', (e) => {
             const target = e.target;
@@ -490,45 +429,34 @@ class FlipbookEngine {
             }
         }, { once: true });
     }
-    
     /**
      * Navigációs gombok láthatóságának frissítése az aktuális oldal alapján
-     */
+   */
     updateNavigationVisibility() {
-        console.log('Navigációs gombok frissítése, aktuális oldal:', this.currentPage);
-        
         const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
-        
-       // Bal gomb frissítése (hátra lapozás) - VISSZAÁLLÍTVA AZ EREDETI LOGIKÁRA
-    if (this.leftButton) {
-        if (this.currentPage <= 0 || this.currentPage >= 2) { // Visszaállítva az eredeti feltétel
-            this.leftButton.style.opacity = '0';
-            this.leftButton.style.pointerEvents = 'none';
-            console.log('Bal gomb elrejtve');
+        // Bal gomb frissítése (hátra lapozás)
+        if (this.leftButton) {
+            if (this.currentPage <= 0 || this.currentPage >= 2) { // Itt a módosítás: hozzáadva a || this.currentPage >= 4 feltétel
+                this.leftButton.style.opacity = '0';
+                this.leftButton.style.pointerEvents = 'none';
+            }
+            else {
+                this.leftButton.style.opacity = '1';
+                this.leftButton.style.pointerEvents = 'auto';
+            }
         }
-        else {
-            this.leftButton.style.opacity = '1';
-            this.leftButton.style.pointerEvents = 'auto';
-            console.log('Bal gomb megjelenítve');
-        }
-    }
-        
         // Jobb gomb frissítése (előre lapozás)
         if (this.rightButton) {
             if (this.currentPage >= maxFreePageNavigation) {
-                // Ha elértük vagy túlléptük a max szabad lapozási limitet, elrejtjük
                 this.rightButton.style.opacity = '0';
                 this.rightButton.style.pointerEvents = 'none';
-                console.log('Jobb gomb elrejtve - elértük a max. lapozási limitet');
-            } else {
-                // Egyébként mutatjuk (borítólapon és 1. oldalon)
+            }
+            else {
                 this.rightButton.style.opacity = '1';
                 this.rightButton.style.pointerEvents = 'auto';
-                console.log('Jobb gomb megjelenítve');
             }
         }
     }
-    
     /**
      * Értesítés megjelenítése
      */
@@ -606,136 +534,6 @@ class FlipbookEngine {
         if (this.rightButton) {
             this.rightButton.removeEventListener('click', this.nextPage);
         }
-    }
-    
-    // Tartalom megjelenítése a jogosultság ellenőrzés után
-    _renderPage(pageId, content) {
-      console.log(`Oldal renderelése: ${pageId}`);
-      
-      try {
-        // Konvertáljuk a pageId-t számmá, ha szükséges
-        let pageNumber = pageId === 'borito' ? 0 : parseInt(pageId, 10);
-        
-        // A megfelelő oldalszámú iframe kiválasztása vagy létrehozása
-        const iframe = this._getOrCreateIframe(pageNumber);
-        
-        if (!iframe) {
-          console.error(`Nem sikerült iframe-et találni a ${pageNumber}. oldalhoz`);
-          return;
-        }
-        
-        // Tartalom betöltése az iframe-be
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(content);
-        iframeDoc.close();
-        
-        // Sandbox korlátozások hozzáadása (biztonsági intézkedések)
-        this._applyIframeSecurity(iframe);
-        
-        // Jelezzük, hogy az oldal készen áll
-        iframe.dataset.loaded = 'true';
-        
-        // Aktiváljuk az oldalt (minden esetben)
-        this._activatePage(pageNumber);
-        
-        console.log(`Oldal sikeresen renderelve: ${pageId}`);
-      } catch (error) {
-        console.error(`Hiba az oldal renderelése közben (${pageId}):`, error);
-      }
-    }
-
-    // Iframe biztonsági beállítások alkalmazása
-    _applyIframeSecurity(iframe) {
-      try {
-        // A sandbox attribútumok beállítása
-        iframe.sandbox = 'allow-same-origin allow-scripts';
-        
-        // iframe-en belüli tartalomhoz scriptek hozzáadása
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        
-        // Script hozzáadása, ami megakadályozza a kimásolást
-        const securityScript = iframeDoc.createElement('script');
-        securityScript.textContent = `
-          document.addEventListener('copy', function(e) {
-            e.preventDefault();
-            return false;
-          });
-          
-          document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-          });
-          
-          document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
-            return false;
-          });
-          
-          // Minden kép megérintés tiltása
-          document.querySelectorAll('img').forEach(img => {
-            img.style.pointerEvents = 'none';
-            img.draggable = false;
-            img.setAttribute('unselectable', 'on');
-          });
-        `;
-        
-        iframeDoc.body.appendChild(securityScript);
-        
-        // CSS szabályok hozzáadása a kijelölés letiltásához
-        const securityStyle = iframeDoc.createElement('style');
-        securityStyle.textContent = `
-          * {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-          }
-          
-          /* Védelem az ideiglenes kijelölés ellen */
-          ::selection {
-            background: transparent;
-            color: inherit;
-          }
-        `;
-        
-        iframeDoc.head.appendChild(securityStyle);
-      } catch (error) {
-        console.error('Hiba az iframe biztonsági beállításakor:', error);
-      }
-    }
-    
-    // Segédfüggvény az iframe kiválasztásához vagy létrehozásához
-    _getOrCreateIframe(pageNumber) {
-      // Ha a kért oldal az aktuális oldal, akkor az aktuális iframe-et használjuk
-      if (pageNumber === this.currentPage && this.currentPageElement) {
-        return this.currentPageElement;
-      }
-      
-      // Ha a kért oldal a következő oldal és van következő iframe, akkor azt használjuk
-      if (pageNumber === this.currentPage + 1 && this.nextPageElement) {
-        return this.nextPageElement;
-      }
-      
-      // Egyébként az aktuális iframe-et használjuk, mert nincs más választásunk
-      return this.currentPageElement;
-    }
-    
-    // Aktív oldal beállítása
-    _activatePage(pageNumber) {
-      console.log(`Oldal aktiválása: ${pageNumber}`);
-      
-      // Beállítjuk az aktuális oldal számát
-      this.currentPage = pageNumber;
-      
-      // Navigációs gombok frissítése
-      this.updateNavigationVisibility();
-      
-      // A data-page attribútum frissítése a body tag-en
-      document.body.setAttribute('data-page', pageNumber.toString());
-      
-      console.log(`Oldal sikeresen aktiválva: ${pageNumber}`);
     }
 }
 // Exportálás
