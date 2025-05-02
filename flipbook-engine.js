@@ -62,6 +62,22 @@ class FlipbookEngine {
           window.authTokenService.getAccessToken();
         }
     }
+	
+	// Borító azonnali betöltésének kikényszerítése késleltetéssel
+setTimeout(() => {
+    // Először töröljük a borítót a content loader cache-ből, ha létezik
+    if (window.contentLoader && window.contentLoader.pages) {
+        window.contentLoader.pages['borito'] = null;
+    }
+    
+    // Újratöltjük a borítót explicit módon
+    this.loadPage(0);
+    
+    // Plusz biztosíték a bal gomb elrejtésére
+    setTimeout(() => {
+        this.hideLeftButtonOnCover();
+    }, 200);
+}, 300);
     /**
      * Flipbook konténer inicializálása
      */
