@@ -817,7 +817,7 @@ class FlipbookEngine {
         return this.currentPageElement;
       }
       
-      // Ha a kért oldal a következő oldal és van következő iframe, akkor azt használjuk
+      // Ha a kért oldal a következő oldal és van következő iframe, akkor azt használjuk!
       if (pageNumber === this.currentPage + 1 && this.nextPageElement) {
         return this.nextPageElement;
       }
