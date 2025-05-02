@@ -278,9 +278,7 @@
 
   </script>
 
-  // Ezt a részt keresd meg az index.html fájlban és cseréld le:
-
-<script>
+  <script>
     let deferredPrompt; // Globális változó a prompt esemény tárolására
 
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -300,15 +298,23 @@
         return; // Kilépünk, nem kell bannert mutatni
       }
 
-      // 3. NE használjunk sessionStorage-t, hanem azonnal megjelenítsük a bannert
+      // 3. Ellenőrizzük, hogy ebben a munkamenetben már megmutattuk-e a bannert
+      if (sessionStorage.getItem('installBannerShown')) {
+        console.log('[InstallPrompt] A banner már megjelent ebben a munkamenetben, nem jelenítjük meg újra.');
+        return; // Kilépünk, nem mutatjuk meg újra
+      }
+
+      // 4. Ha nem telepített módban fut és még nem mutattuk meg -> Eltároljuk az eseményt későbbre
       console.log('[InstallPrompt] Telepítési prompt eltárolva.');
       deferredPrompt = e;
 
-      // 4. Megjelenítjük a saját bannerünket
+      // 5. Megjelenítjük a saját bannerünket
       const installBanner = document.getElementById('install-banner');
       if (installBanner) {
         console.log('[InstallPrompt] Telepítési banner megjelenítése.');
         installBanner.style.display = 'block';
+        // Beállítunk egy jelzőt a sessionStorage-ben, hogy tudjuk, már megmutattuk
+        sessionStorage.setItem('installBannerShown', 'true');
       } else {
          console.error('[InstallPrompt] Az "install-banner" elem nem található!');
       }
@@ -346,7 +352,7 @@
     } else {
          console.error('[InstallPrompt] Nem sikerült click eseménykezelőt hozzáadni: Az "install-banner" elem nem található!');
     }
-</script>
+  </script>
 
   <script>
     if ('serviceWorker' in navigator) {

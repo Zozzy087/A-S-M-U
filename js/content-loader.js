@@ -6,10 +6,6 @@
 class ContentLoader {
   constructor() {
     this.pages = {}; // Gyorsítótár a betöltött oldalakhoz
-	// Cache törlése, ha van licenc ID, de a cache-elt oldalak még nem tartalmaznak láblécsávot
-if (localStorage.getItem('book_license_id')) {
-  this.pages = {}; // Kiürítjük a cache-t, hogy minden oldal frissen töltődjön be
-}
     this.renderCallback = null; // Visszahívás függvény az oldalak megjelenítéséhez
     this.isInitialized = false; // Jelzi, hogy a Firebase DB kapcsolat létrejött-e
 
@@ -251,49 +247,20 @@ if (localStorage.getItem('book_license_id')) {
    * @param {string} content - A megjelenítendő tartalom
    */
   _renderContent(pageId, content) {
-  if (this.renderCallback) {
-    try {
-      // Licenc információ beszúrása
-      const licenseId = localStorage.getItem('book_license_id') || 'ISMERETLEN';
-      const activationCode = localStorage.getItem('activation_code') || 'ISMERETLEN';
-      
-      // A tartalomba beillesztünk egy licenc footert
-      let contentWithLicense = content;
-      
-      // Ellenőrizzük, van-e már </body> a tartalomban
-      if (content.includes('</body>')) {
-        contentWithLicense = content.replace('</body>', `
-          <div style="position: fixed; bottom: 0; left: 0; width: 100%; 
-              background-color: rgba(0,0,0,0.7); color: white; 
-              font-family: Arial, sans-serif; font-size: 12px;
-              padding: 8px; text-align: center; z-index: 9999;">
-            Ez a könyv a "${activationCode.substring(0, 4)}****" kóddal lett aktiválva. 
-            Egyedi licenc azonosító: ${licenseId}. 
-            © ${new Date().getFullYear()} Minden jog fenntartva.
-          </div>
-        </body>`);
-      } else {
-        // Ha nincs body tag, akkor a tartalom végére illesztjük
-        contentWithLicense = `${content}
-          <div style="position: fixed; bottom: 0; left: 0; width: 100%; 
-              background-color: rgba(0,0,0,0.7); color: white; 
-              font-family: Arial, sans-serif; font-size: 12px;
-              padding: 8px; text-align: center; z-index: 9999;">
-            Ez a könyv a "${activationCode.substring(0, 4)}****" kóddal lett aktiválva. 
-            Egyedi licenc azonosító: ${licenseId}. 
-            © ${new Date().getFullYear()} Minden jog fenntartva.
-          </div>`;
+    if (this.renderCallback) {
+      try {
+        this.renderCallback(pageId, content);
+        // console.log(`[ContentLoader] Tartalom sikeresen átadva renderelésre: ${pageId}`);
+      } catch (renderError) {
+          console.error(`[ContentLoader] Hiba a renderCallback végrehajtása közben (${pageId}):`, renderError);
+          // Itt is megjeleníthetnénk egy általános hibaoldalt
+          this._renderGenericErrorPage(pageId, 'Hiba történt az oldal megjelenítése közben.');
       }
-      
-      this.renderCallback(pageId, contentWithLicense);
-    } catch (renderError) {
-      console.error(`[ContentLoader] Hiba a renderCallback végrehajtása közben (${pageId}):`, renderError);
-      this._renderGenericErrorPage(pageId, 'Hiba történt az oldal megjelenítése közben.');
+    } else {
+      console.error('[ContentLoader] Nincs beállítva renderCallback függvény!');
+      // Callback nélkül nem tudjuk megjeleníteni
     }
-  } else {
-    console.error('[ContentLoader] Nincs beállítva renderCallback függvény!');
   }
-}
 
   /**
    * Jogosultsági Hibaoldal megjelenítése

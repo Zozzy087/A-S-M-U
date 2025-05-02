@@ -49,8 +49,6 @@ class FlipbookEngine {
         this.loadPage(0);
         // Navigációs gombok kezdeti beállítása
         this.updateNavigationVisibility();
-        // Borítón mindig elrejtjük a visszalapozó gombot
-        this.hideLeftButtonOnCover();
         
         // Tartalom betöltő és token kezelő inicializálása
         if (window.contentLoader) {
@@ -62,22 +60,6 @@ class FlipbookEngine {
           window.authTokenService.getAccessToken();
         }
     }
-	
-	// Borító azonnali betöltésének kikényszerítése késleltetéssel
-setTimeout(() => {
-    // Először töröljük a borítót a content loader cache-ből, ha létezik
-    if (window.contentLoader && window.contentLoader.pages) {
-        window.contentLoader.pages['borito'] = null;
-    }
-    
-    // Újratöltjük a borítót explicit módon
-    this.loadPage(0);
-    
-    // Plusz biztosíték a bal gomb elrejtésére
-    setTimeout(() => {
-        this.hideLeftButtonOnCover();
-    }, 200);
-}, 300);
     /**
      * Flipbook konténer inicializálása
      */
@@ -287,39 +269,6 @@ setTimeout(() => {
             
             // Navigációs gombok frissítése
             this.updateNavigationVisibility();
-            
-            // Ha borítóra navigálunk, külön is biztosítjuk, hogy ne legyen visszalapozó gomb
-            if (pageNumber === 0) {
-                this.hideLeftButtonOnCover();
-            }
-        }
-    }
-
-    /**
-     * Bal gomb explicit elrejtése a borítón (biztonsági megoldás)
-     */
-    hideLeftButtonOnCover() {
-        // Ha a borítón vagyunk és létezik bal gomb, akkor bizonyosan elrejtjük
-        if (this.currentPage === 0 && this.leftButton) {
-            console.log("Bal gomb explicit elrejtése a borítón");
-            this.leftButton.style.opacity = '0';
-            this.leftButton.style.pointerEvents = 'none';
-            this.leftButton.style.display = 'none'; // Teljesen eltávolítjuk a DOM-ból
-            // iframe-en belüli kezelés is - ha az iframe már betöltődött
-            if (this.currentPageElement && this.currentPageElement.contentDocument) {
-                try {
-                    // Adjunk hozzá egy stílust az iframe-hez, hogy a tartalom ne legyen kattintható
-                    const style = this.currentPageElement.contentDocument.createElement('style');
-                    style.textContent = `
-                        * {
-                            pointer-events: none;
-                        }
-                    `;
-                    this.currentPageElement.contentDocument.head.appendChild(style);
-                } catch (e) {
-                    console.error('Nem sikerült módosítani az iframe tartalmát borító módban:', e);
-                }
-            }
         }
     }
 
@@ -333,14 +282,6 @@ setTimeout(() => {
             return;
         }
         
-        // Ha borítóra navigálunk, rögtön elrejtjük a bal gombot
-        if (pageNumber === 0) {
-            this.currentPage = 0; // Explicit beállítjuk
-            setTimeout(() => {
-                this.hideLeftButtonOnCover(); // Explicit elrejtjük a bal gombot késleltetéssel
-            }, 10);
-        }
-        
         // Ha van ContentLoader, azt használjuk (biztonságos)
         if (window.contentLoader) {
             const pageId = pageNumber === 0 ? 'borito' : pageNumber.toString();
@@ -350,14 +291,6 @@ setTimeout(() => {
                     // A loadContent után frissítjük a navigációs gombokat
                     this.currentPage = pageNumber;
                     this.updateNavigationVisibility();
-                    
-                    // Borítónál még egyszer ellenőrizzük, késleltetéssel
-                    if (pageNumber === 0) {
-                        setTimeout(() => {
-                            this.hideLeftButtonOnCover();
-                        }, 50);
-                    }
-                    
                     console.log(`Oldal betöltve ContentLoader-rel: ${pageId}, sikeres: ${success}`);
                 })
                 .catch(error => {
@@ -368,13 +301,6 @@ setTimeout(() => {
         else {
             console.log(`Eredeti betöltési logika használata: ${pageNumber}`);
             this._originalLoadPage(pageNumber);
-            
-            // Borítónál még egyszer ellenőrizzük, késleltetéssel
-            if (pageNumber === 0) {
-                setTimeout(() => {
-                    this.hideLeftButtonOnCover();
-                }, 50);
-            }
         }
     }
     
@@ -392,19 +318,14 @@ setTimeout(() => {
         }
         this.flipPageAnimation('right');
     }
-    
     /**
      * Előző oldalra lapozás
      */
     prevPage() {
-        // Már a borítón vagyunk vagy animáció zajlik - nem csinálunk semmit
-        if (this.isAnimating || this.currentPage <= 0) {
-            console.log("Nem lapozunk: már a borítón vagyunk vagy animáció zajlik.");
+        if (this.isAnimating || this.currentPage <= 0)
             return;
-        }
         this.flipPageAnimation('left');
     }
-    
     /**
      * Lapozási animáció végrehajtása
      */
@@ -469,20 +390,11 @@ setTimeout(() => {
                 this.currentPage = nextPageNum;
                 // Navigációs gombok frissítése
                 this.updateNavigationVisibility();
-                
-                // Ha borítóra lapoztunk, még egyszer elrejtjük a bal gombot
-                if (nextPageNum === 0) {
-                    setTimeout(() => {
-                        this.hideLeftButtonOnCover();
-                    }, 50);
-                }
-                
                 // Animáció befejezve
                 this.isAnimating = false;
             }, 500); // Animáció ideje
         }, 50);
     }
-    
     /**
      * Navigációs menü megjelenítése
      */
@@ -549,13 +461,6 @@ setTimeout(() => {
                 // Explicit beállítjuk az aktuális oldalt és frissítjük a navigációs gombokat
                 this.currentPage = chapter.page;
                 this.updateNavigationVisibility();
-                
-                // Ha borítóra navigálunk, elrejtjük a bal gombot
-                if (chapter.page === 0) {
-                    setTimeout(() => {
-                        this.hideLeftButtonOnCover();
-                    }, 50);
-                }
             });
             
             // Hover effekt
@@ -592,33 +497,21 @@ setTimeout(() => {
     updateNavigationVisibility() {
         console.log('Navigációs gombok frissítése, aktuális oldal:', this.currentPage);
         
-        const maxFreePageNavigation = 2; // Ez az érték, ameddig lapozni lehet
+        const maxFreePageNavigation = 2; // Ezt állítsd be, ameddig a lapozás elérhető
         
-        // Bal gomb frissítése (hátra lapozás) - JAVÍTOTT változat
-        if (this.leftButton) {
-            // JAVÍTÁS: A 0-s oldalon (borítón) SOHA ne jelenjen meg a bal gomb!
-            if (this.currentPage === 0) {
-                // Borítón vagyunk, itt soha nem kell vissza gomb
-                this.leftButton.style.opacity = '0';
-                this.leftButton.style.pointerEvents = 'none';
-                this.leftButton.style.display = 'none'; // Teljesen eltávolítjuk a DOM-ból
-                console.log('Bal gomb elrejtve - borítón vagyunk');
-            }
-            else if (this.currentPage === 1) {
-                // 1. oldalon vagyunk, itt megjelenik a vissza gomb
-                this.leftButton.style.opacity = '1';
-                this.leftButton.style.pointerEvents = 'auto';
-                this.leftButton.style.display = 'flex'; // Visszaállítjuk a megjelenítést
-                console.log('Bal gomb megjelenítve - 1. oldalon vagyunk');
-            }
-            else if (this.currentPage >= 2) {
-                // 2. vagy későbbi oldalon vagyunk, itt elrejtjük a gombot
-                this.leftButton.style.opacity = '0';
-                this.leftButton.style.pointerEvents = 'none';
-                this.leftButton.style.display = 'none'; // Eltávolítjuk a DOM-ból
-                console.log('Bal gomb elrejtve - 2. vagy későbbi oldalon vagyunk');
-            }
+       // Bal gomb frissítése (hátra lapozás) - VISSZAÁLLÍTVA AZ EREDETI LOGIKÁRA
+    if (this.leftButton) {
+        if (this.currentPage <= 0 || this.currentPage >= 2) { // Visszaállítva az eredeti feltétel
+            this.leftButton.style.opacity = '0';
+            this.leftButton.style.pointerEvents = 'none';
+            console.log('Bal gomb elrejtve');
         }
+        else {
+            this.leftButton.style.opacity = '1';
+            this.leftButton.style.pointerEvents = 'auto';
+            console.log('Bal gomb megjelenítve');
+        }
+    }
         
         // Jobb gomb frissítése (előre lapozás)
         if (this.rightButton) {
@@ -631,7 +524,6 @@ setTimeout(() => {
                 // Egyébként mutatjuk (borítólapon és 1. oldalon)
                 this.rightButton.style.opacity = '1';
                 this.rightButton.style.pointerEvents = 'auto';
-                this.rightButton.style.display = 'flex'; // Biztosítjuk, hogy megjelenjen
                 console.log('Jobb gomb megjelenítve');
             }
         }
@@ -718,46 +610,39 @@ setTimeout(() => {
     
     // Tartalom megjelenítése a jogosultság ellenőrzés után
     _renderPage(pageId, content) {
-        console.log(`Oldal renderelése: ${pageId}`);
+      console.log(`Oldal renderelése: ${pageId}`);
       
-        try {
-            // Konvertáljuk a pageId-t számmá, ha szükséges
-            let pageNumber = pageId === 'borito' ? 0 : parseInt(pageId, 10);
+      try {
+        // Konvertáljuk a pageId-t számmá, ha szükséges
+        let pageNumber = pageId === 'borito' ? 0 : parseInt(pageId, 10);
         
-            // A megfelelő oldalszámú iframe kiválasztása vagy létrehozása
-            const iframe = this._getOrCreateIframe(pageNumber);
+        // A megfelelő oldalszámú iframe kiválasztása vagy létrehozása
+        const iframe = this._getOrCreateIframe(pageNumber);
         
-            if (!iframe) {
-                console.error(`Nem sikerült iframe-et találni a ${pageNumber}. oldalhoz`);
-                return;
-            }
-        
-            // Tartalom betöltése az iframe-be
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(content);
-            iframeDoc.close();
-        
-            // Sandbox korlátozások hozzáadása (biztonsági intézkedések)
-            this._applyIframeSecurity(iframe);
-        
-            // Jelezzük, hogy az oldal készen áll
-            iframe.dataset.loaded = 'true';
-        
-            // Aktiváljuk az oldalt (minden esetben)
-            this._activatePage(pageNumber);
-        
-            // Plusz ellenőrzés: ha borítón vagyunk, akkor biztosan elrejtjük a bal gombot
-            if (pageNumber === 0) {
-                setTimeout(() => {
-                    this.hideLeftButtonOnCover();
-                }, 50);
-            }
-        
-            console.log(`Oldal sikeresen renderelve: ${pageId}`);
-        } catch (error) {
-            console.error(`Hiba az oldal renderelése közben (${pageId}):`, error);
+        if (!iframe) {
+          console.error(`Nem sikerült iframe-et találni a ${pageNumber}. oldalhoz`);
+          return;
         }
+        
+        // Tartalom betöltése az iframe-be
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(content);
+        iframeDoc.close();
+        
+        // Sandbox korlátozások hozzáadása (biztonsági intézkedések)
+        this._applyIframeSecurity(iframe);
+        
+        // Jelezzük, hogy az oldal készen áll
+        iframe.dataset.loaded = 'true';
+        
+        // Aktiváljuk az oldalt (minden esetben)
+        this._activatePage(pageNumber);
+        
+        console.log(`Oldal sikeresen renderelve: ${pageId}`);
+      } catch (error) {
+        console.error(`Hiba az oldal renderelése közben (${pageId}):`, error);
+      }
     }
 
     // Iframe biztonsági beállítások alkalmazása
@@ -793,11 +678,6 @@ setTimeout(() => {
             img.draggable = false;
             img.setAttribute('unselectable', 'on');
           });
-          
-          // Ha borítón vagyunk, akkor ne engedjük a kattintásokat
-          if (window.parent && window.parent.flipbookInstance && window.parent.flipbookInstance.currentPage === 0) {
-            document.body.style.pointerEvents = 'none';
-          }
         `;
         
         iframeDoc.body.appendChild(securityScript);
@@ -833,7 +713,7 @@ setTimeout(() => {
         return this.currentPageElement;
       }
       
-      // Ha a kért oldal a következő oldal és van következő iframe, akkor azt használjuk!
+      // Ha a kért oldal a következő oldal és van következő iframe, akkor azt használjuk
       if (pageNumber === this.currentPage + 1 && this.nextPageElement) {
         return this.nextPageElement;
       }
@@ -852,18 +732,8 @@ setTimeout(() => {
       // Navigációs gombok frissítése
       this.updateNavigationVisibility();
       
-      // Plusz ellenőrzés: ha borítón vagyunk, akkor biztosan elrejtjük a bal gombot
-      if (pageNumber === 0) {
-          setTimeout(() => {
-              this.hideLeftButtonOnCover();
-          }, 50);
-      }
-      
       // A data-page attribútum frissítése a body tag-en
       document.body.setAttribute('data-page', pageNumber.toString());
-      
-      // Írjuk be a globális navigációs funkciót az ablakba
-      window.flipbookInstance = this;
       
       console.log(`Oldal sikeresen aktiválva: ${pageNumber}`);
     }

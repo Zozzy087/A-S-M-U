@@ -264,24 +264,15 @@ class AuthService {
       const currentTime = new Date();
       console.log('[AuthService] Aktuális idő:', currentTime);
 
-      // Egyedi licenc ID generálása az aktivációs kód és a felhasználói ID alapján
-const licenseId = `${code.substring(0, 4)}-${userId.substring(0, 5)}-${Date.now().toString(36)}`;
-// Aktivációs kód mentése a localStorage-ba
-localStorage.setItem('activation_code', code);
-	  
-	  // Eszköz információk
-const deviceInfo = {
-  deviceId: userId,
-  activatedAt: currentTime,
-  deviceType: this._getDeviceType(),
-  userAgent: navigator.userAgent,
-  licenseId: licenseId  // Új mező: a licenc ID tárolása
-};
+      // Eszköz információk
+      const deviceInfo = {
+        deviceId: userId,
+        activatedAt: currentTime,
+        deviceType: this._getDeviceType(),
+        userAgent: navigator.userAgent
+      };
 
       console.log('[AuthService] Eszköz információk:', JSON.stringify(deviceInfo));
-	  
-	  // Licenc ID mentése a localStorage-ba is
-localStorage.setItem('book_license_id', licenseId);
 
       // Firestore frissítési logika
       try {
