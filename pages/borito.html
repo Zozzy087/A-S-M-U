@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Borító</title>
+  <style>
+    body, html {
+      margin: 0; padding: 0; overflow: hidden; 
+      width: 100%; height: 100%; background: black; 
+      display: flex; justify-content: center; align-items: center;
+    }
+    img {
+      max-width: 100%; max-height: 100%; cursor: pointer; transition: transform 0.5s ease;
+    }
+    img:hover {
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body>
+  <img src="../images/oldalak/borito.webp" alt="Borító" id="cover-image">
+  <script>
+    document.getElementById('cover-image').onclick = () => {
+      parent.goToPage(1);
+    };
+  </script>
+</body>
+</html>
