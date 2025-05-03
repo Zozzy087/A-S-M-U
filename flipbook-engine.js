@@ -229,51 +229,60 @@ class FlipbookEngine {
         }
     }
     /**
- * Oldalbetöltés KEZDEMÉNYEZÉSE (ÚJ VERZIÓ)
- * Ez a funkció most már a ContentLoader-t kéri meg a betöltésre és ellenőrzésre.
- */
-loadPage(pageIdentifier) {
-    // Azonosító átalakítása szöveggé (string), hogy biztosan az legyen
-    const pageId = String(pageIdentifier);
-
-    console.log(`[FlipbookEngine] Oldalbetöltési kérelem érkezett: ${pageId}`);
-
-    // Ellenőrizzük, hogy a ContentLoader elérhető-e (biztonsági ellenőrzés)
-    if (window.contentLoader) {
-        // Megkérjük a ContentLoader-t, hogy töltse be és ellenőrizze az oldalt
-        window.contentLoader.loadContent(pageId)
-            .then(success => {
-                // Ez a rész akkor fut le, MIUTÁN a ContentLoader végzett.
-                if (success) {
-                    // Ha a ContentLoader sikeres volt (token rendben, tartalom elérhető):
-                    // CSAK MOST frissítjük a FlipbookEngine állapotát!
-                    this.currentPage = pageId; // Elmentjük az aktuális oldal azonosítóját
-                    document.body.setAttribute('data-page', pageId); // Frissítjük a body attribútumot
-                    this.updateNavigationVisibility(); // Frissítjük a lapozó nyilak láthatóságát
-                    console.log(`[FlipbookEngine] Állapot sikeresen frissítve: ${pageId}`);
-
-                    // Itt NEM kell beállítani az iframe src-jét (this.currentPageElement.src = ...),
-                    // mert azt feltételezzük, hogy a ContentLoader _renderContent metódusa
-                    // (vagy a neki adott callback funkció) már megtette,
-                    // amikor sikeresen betöltötte a tartalmat.
-                } else {
-                    // Ha a ContentLoader sikertelen volt (pl. nincs jogosultság):
-                    // Nem csinálunk semmit itt, mert a ContentLoader már
-                    // valószínűleg megjelenítette a hibaoldalt.
-                    console.warn(`[FlipbookEngine] A ContentLoader sikertelen betöltést jelzett: ${pageId}`);
-                }
-            })
-            .catch(error => {
-                // Hiba történt a ContentLoader hívása közben
-                console.error(`[FlipbookEngine] Hiba a contentLoader.loadContent hívásakor (${pageId}):`, error);
-                this.showNotification("Hiba az oldal betöltése közben."); // Értesítjük a felhasználót
-            });
+     * Oldalbetöltés
+     */
+    loadPage(pageNumber) {
+        if (pageNumber < 0 || pageNumber > this.totalPages)
+            return;
+        if (this.currentPageElement) {
+            const pagePath = pageNumber === 0 ? 'pages/borito.html' : `pages/${pageNumber}.html`;
+            this.currentPageElement.src = pagePath;
+            this.currentPage = pageNumber;
+			
+			// ---- ÚJ RÉSZ KEZDETE ----
+// Explicit interaktivitás és kurzor beállítása az iframe-en
+if (this.currentPageElement) {
+    if (pageNumber === 0) {
+        // Borító: tiltsuk le az egéreseményeket és állítsuk be a kurzort
+        this.currentPageElement.style.pointerEvents = 'none';
+        this.currentPageElement.style.cursor = 'default';
+        // console.log('Borító iframe inaktívvá téve.'); // Ez a sor nem fontos
     } else {
-        // Ha a ContentLoader valamiért nem elérhető
-        console.error("[FlipbookEngine] Hiba: ContentLoader példány nem található!");
-        this.showNotification("Hiba: A tartalombetöltő szolgáltatás nem érhető el.");
+        // Nem borító: engedélyezzük az egéreseményeket
+        this.currentPageElement.style.pointerEvents = '';
+        this.currentPageElement.style.cursor = '';
+        // console.log(`Oldal ${pageNumber} iframe aktívvá téve.`); // Ez a sor nem fontos
     }
-} // <-- Itt a vége az ÚJ loadPage funkciónak
+}
+// ---- ÚJ RÉSZ VÉGE ----
+			
+            // Beállítjuk a data-page attribútumot a body tag-en
+            document.body.setAttribute('data-page', pageNumber.toString());
+            // Az iframe betöltése után állítsuk be a tartalom méretét
+            this.currentPageElement.onload = () => {
+                var _a;
+                try {
+                    const iframeDoc = (_a = this.currentPageElement) === null || _a === void 0 ? void 0 : _a.contentDocument;
+                    if (iframeDoc) {
+                        // CSS szabály hozzáadása, hogy a tartalom ne érjen le a vezérlősávig
+                        const style = iframeDoc.createElement('style');
+                        style.textContent = `
+              body {
+                padding-bottom: 70px !important;
+                box-sizing: border-box;
+              }
+            `;
+                        iframeDoc.head.appendChild(style);
+                    }
+                }
+                catch (e) {
+                    console.error('Nem sikerült módosítani az iframe tartalmát:', e);
+                }
+            };
+            // Navigációs gombok frissítése
+            this.updateNavigationVisibility();
+        }
+    }
     /**
      * Következő oldalra lapozás
      */

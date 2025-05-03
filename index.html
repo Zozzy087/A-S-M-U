@@ -276,27 +276,9 @@
      // Megjegyzés: Ha a kocka widgetek HTML/JS kódja az adott oldalak (iframe-ek)
      // részét képezi, akkor ez a globális funkció nem szükséges itt.
 
-
-
-// Ezt add hozzá az index.html scriptjébe
-function handlePageNavigation(pageId) {
-  console.log(`[index.html] handlePageNavigation meghívva, pageId: ${pageId}`);
-  if (window.flipbookInstance) {
-    // Itt hívjuk meg a FlipbookEngine loadPage metódusát
-    // Feltételezzük, hogy a loadPage képes kezelni a pageId-t (ami lehet string)
-    window.flipbookInstance.loadPage(pageId);
-  } else {
-    console.error("[index.html] Hiba: Flipbook instance nem elérhető a navigációhoz!");
-  }
-}
-// Globálissá tesszük, hogy az iframe elérje
-window.handlePageNavigation = handlePageNavigation;
-
-// A régi goToPage funkciót akár el is távolíthatod, ha már semmi más nem használja,
-// vagy átalakíthatod, hogy az is ezt hívja:
-// function goToPage(pageId) { handlePageNavigation(pageId); }
-// window.goToPage = goToPage;
   </script>
+
+  
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -309,7 +291,6 @@ window.handlePageNavigation = handlePageNavigation;
       });
     }
   </script>
-<script src="../js/page-interaction.js"></script>
 
 </body>
 </html>
