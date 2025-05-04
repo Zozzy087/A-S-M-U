@@ -27,7 +27,7 @@
   <meta property="og:image" content="./files/icon-512.png">
   
   <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="common-styles.css">
@@ -39,7 +39,7 @@
       width: 100%;
       height: 100%;
       background-color: #000000;
-      font-family: 'Cinzel', serif;
+      font-family: "Palatino", "Blogger Sans";
       color: white;
     }
     
@@ -98,7 +98,7 @@
     
     .menu-item h3 {
       margin: 0;
-      font-size: 1.4rem;
+      font-size: 2.0rem;
       color: #91E35D;
     }
     
@@ -108,67 +108,6 @@
       opacity: 0.8;
     }
     
-    /* Legördülő menü */
-    .select-container {
-      margin-top: 30px;
-      text-align: center;
-    }
-    
-    .select-wrapper {
-      position: relative;
-      display: inline-block;
-      max-width: 400px;
-      width: 100%;
-    }
-    
-    .select-wrapper:after {
-      content: "\25BC";
-      position: absolute;
-      top: 0;
-      right: 15px;
-      bottom: 0;
-      font-size: 12px;
-      line-height: 48px;
-      color: #91E35D;
-      pointer-events: none;
-    }
-    
-    select {
-      width: 100%;
-      padding: 12px;
-      font-family: 'Cinzel', serif;
-      font-size: 1rem;
-      background-color: #1a1a1a;
-      color: white;
-      border: 2px solid #368B27;
-      border-radius: 5px;
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-    }
-    
-    select:focus {
-      outline: none;
-      border-color: #91E35D;
-    }
-    
-    .go-button {
-      margin-top: 15px;
-      padding: 12px 30px;
-      font-family: 'Cinzel', serif;
-      font-size: 1rem;
-      background-color: #368B27;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    
-    .go-button:hover {
-      background-color: #91E35D;
-    }
     
     /* Betöltő képernyő */
     #loading-screen {
@@ -188,7 +127,7 @@
     .loader {
       width: 50px;
       height: 50px;
-      border: 5px solid #7f00ff;
+      border: 5px solid #368B27;
       border-radius: 50%;
       border-top-color: transparent;
       animation: spin 1s linear infinite;
@@ -247,6 +186,13 @@
         font-size: 0.9rem;
       }
     }
+	  .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -259,55 +205,55 @@
     </small>
   </div>
 
-  <!-- Betöltő képernyő -->
-  <div id="loading-screen">
-    <div class="loader"></div>
+ <!-- Betöltő képernyő -->
+<div id="loading-screen">
+  <div class="loader"></div>
+</div>
+<div class="container">
+  <h1 class="title">A Sötét Mágia Útvesztője</h1>
+  <p class="subtitle">Válassz a rendelkezésre álló eszközök közül</p>
+  
+  <div class="menu-container">
+    <a href="pages/dice1.html" class="menu-item">
+      <img src="images/d6.png" alt="Egy kocka" onerror="this.src='images/d1.png'">
+      <h3>1 Kockás Dobás</h3>
+     
+    </a>
+    
+    <a href="pages/dice3.html" class="menu-item">
+      <img src="images/d3.png" alt="Három kocka" onerror="this.src='images/d3.png'">
+      <h3>3 Kockás Dobás</h3>
+     
+    </a>
+    
+    <a href="pages/character.html" class="menu-item">
+      <img src="images/dark_knowledge.png" alt="Karakter" onerror="this.src='images/dark_knowledge.png'">
+      <h3>Karaktergenerálás</h3>
+     
+    </a>
   </div>
+  
+  <!-- Válaszok elem középre igazítva -->
+  <div class="centered-menu-item">
+    <a href="pages/answer.html" class="menu-item">
+      <img src="images/lapozz.png" alt="Válaszok" onerror="this.src='images/lapozz.png'" style="width: 120px; height: auto;">
+      <h3>Válaszok</h3>
+      <p>Itt adhatod meg a rejtvényekre a választ, ha offline vagy</p>
+    </a>
+  </div>
+</div>
 
-  <div class="container">
-    <h1 class="title">A Sötét Mágia Útvesztője</h1>
-    <p class="subtitle">Válassz a rendelkezésre álló eszközök közül</p>
+<style>
+  /* Középre igazítás a menüben */
+  .centered-menu-item {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 20px;
+  }
+</style>
     
-    <div class="menu-container">
-      <a href="pages/dice1.html" class="menu-item">
-        <img src="images/d6.png" alt="Egy kocka" onerror="this.src='images/d1.png'">
-        <h3>1 Kockás Dobás</h3>
-        <p>Egyszerű dobás egy kockával</p>
-      </a>
-      
-      <a href="pages/dice3.html" class="menu-item">
-        <img src="images/d3.png" alt="Három kocka" onerror="this.src='images/d3.png'">
-        <h3>3 Kockás Dobás</h3>
-        <p>Dobás három kockával - siker számolással</p>
-      </a>
-      
-      <a href="pages/character.html" class="menu-item">
-        <img src="images/dark_knowledge.png" alt="Karakter" onerror="this.src='images/dark_knowledge.png'">
-        <h3>Karaktergenerálás</h3>
-        <p>Hozz létre egy egyedi karaktert</p>
-      </a>
-      
-      <a href="pages/answer.html" class="menu-item">
-        <img src="images/lapozz.png" alt="Válaszok" onerror="this.src='images/lapozz.png'" style="width: 120px; height: auto;">
-        <h3>Válaszok</h3>
-        <p>Válaszok a könyv kérdéseire (Ha offline vagy)</p>
-      </a>
-    </div>
-    
-    <!-- Legördülő menü az offline válaszadáshoz -->
-    <div class="select-container">
-      <h3>Gyors ugrás a válaszokhoz</h3>
-      <div class="select-wrapper">
-        <select id="answer-select">
-          <option value="" selected disabled>Válassz egy oldalt...</option>
-          <option value="1">1. oldal - A kezdet</option>
-          <option value="6">6. oldal - Válaszadós oldal</option>
-          <!-- További oldalak itt -->
-        </select>
-      </div>
-      <button class="go-button" onclick="goToAnswer()">Ugrás</button>
-    </div>
-  </div>
+   
 
   <script>
     // Betöltő képernyő
@@ -357,5 +303,8 @@
         .catch(err => console.error('SW hiba:', err));
     }
   </script>
+   <div class="footer">
+    &copy; 2025 A Sötét Mágia Útvesztője /Zordán Erik - DARK FANTASY KALANDKÖNYVEK/
+  </div>
 </body>
 </html>

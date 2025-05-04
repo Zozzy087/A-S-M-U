@@ -6,13 +6,12 @@
   <title>Válaszok - A Sötét Mágia Útvesztője</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../common-styles.css">
   
   <style>
     body {
       background-color: #000000;
       color: white;
-      font-family: "Palatino", "Blogger Sans";
+      font-family: "Palatino", "Blogger Sans", serif;
       margin: 0;
       padding: 0;
       min-height: 100vh;
@@ -22,15 +21,16 @@
     
     .container {
       max-width: 800px;
+      width: 95%;
       margin: 0 auto;
-      padding: 20px;
+      padding: 20px 10px;
       flex-grow: 1;
     }
     
     .title {
       color: #91E35D;
       text-align: center;
-      font-size: 2.2rem;
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
       margin-bottom: 20px;
       text-shadow: 0 0 10px rgba(54, 139, 39, 0.5);
     }
@@ -52,12 +52,12 @@
       background-color: rgba(0, 0, 0, 0.7);
       border: 2px solid #368B27;
       border-radius: 10px;
-      padding: 30px;
+      padding: 20px 15px;
       margin-top: 20px;
     }
     
     .page-title {
-      font-family: "Palatino", "Blogger Sans";
+      font-family: "Palatino", "Blogger Sans", serif;
       color: white;
       background-color: #368B27;
       display: inline-block;
@@ -94,7 +94,7 @@
     select {
       width: 100%;
       padding: 12px;
-      font-family: "Palatino", "Blogger Sans";
+      font-family: "Palatino", "Blogger Sans", serif;
       font-size: 1rem;
       background-color: #1a1a1a;
       color: white;
@@ -114,7 +114,7 @@
     .go-button {
       margin-top: 15px;
       padding: 12px 30px;
-      font-family: "Palatino", "Blogger Sans";
+      font-family: "Palatino", "Blogger Sans", serif;
       font-size: 1rem;
       background-color: #368B27;
       color: white;
@@ -131,7 +131,7 @@
     .footer {
       text-align: center;
       margin-top: 40px;
-      padding: 20px;
+      padding: 15px;
       font-size: 0.9rem;
       opacity: 0.7;
     }
@@ -142,9 +142,10 @@
       color: white;
       margin-bottom: 30px;
       line-height: 1.3;
-      font-size: 36px;
-      width: 600px;
-      padding: 20px;
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      max-width: 600px;
+      width: 100%;
+      padding: auto;
       background-color: #368B27;
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -155,7 +156,7 @@
     
     .puzzle-box {
       background-color: transparent;
-      padding: 20px;
+      padding: auto;
       border-radius: 10px;
       margin-top: 20px;
     }
@@ -168,23 +169,32 @@
     .puzzle-box input {
       display: block;
       width: 100%;
-      padding: 10px;
-      margin: 10px 0;
+      padding: auto;
+      margin: 25px 0;
       border: 1px solid #368B27; 
       border-radius: 5px;
       background-color: rgba(0, 0, 0, 0.2);
       color: white;
+      font-size: 16px; /* Elég nagy méret a mobilon történő begépeléshez */
     }
     
     .puzzle-box button {
-      padding: 10px 20px;
+      padding: 12px 25px;
       margin-top: 20px;
+      margin-bottom: 10px;
       background-color: #368B27; 
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      font-family: "Palatino", "Blogger Sans";
+      font-family: "Palatino", "Blogger Sans", serif;
+      font-size: 1rem;
+    }
+    
+    .button-container {
+      display: flex;
+      justify-content: center;
+      width: 100%;
     }
     
     .puzzle-box button:hover {
@@ -195,6 +205,60 @@
       margin-top: 20px;
       font-weight: bold;
       min-height: 24px;
+      text-align: center;
+    }
+    
+    /* Média lekérdezések a különböző képernyőméretekhez */
+    @media screen and (max-width: 768px) {
+      .container {
+        padding: 15px 10px;
+      }
+      
+      .answer-container {
+        padding: 15px 10px;
+      }
+      
+      .title {
+        margin-bottom: 15px;
+      }
+      
+      .puzzle-title {
+        padding: auto;
+        margin-bottom: 20px;
+      }
+    }
+    
+    @media screen and (max-width: 480px) {
+      .container {
+        padding: 10px 5px;
+      }
+      
+      .back-link {
+        font-size: 0.9rem;
+      }
+      
+      .answer-container {
+        padding: 12px 8px;
+      }
+      
+      .puzzle-title {
+        padding: auto;
+        margin-bottom: 15px;
+      }
+      
+      .puzzle-box {
+        padding: 10px 5px;
+      }
+      
+      .puzzle-box input {
+        padding: auto;
+      }
+      
+      .footer {
+        margin-top: 20px;
+        padding: 10px;
+        font-size: 0.8rem;
+      }
     }
   </style>
 </head>
@@ -206,11 +270,14 @@
     
     <div class="page-select-container">
       <div class="page-select-wrapper">
-        <select id="page-select" onchange="loadPage()">
-          <option value="" selected disabled>Válassz egy rejtvényt...</option>
-          <option value="sors-istenno">A Sors Istennőinek Rejtvénye</option>
-          <!-- További rejtvények itt -->
-        </select>
+        <select id="page-select">
+  <option value="" selected disabled>Válassz egy rejtvényt...</option>
+  <option value="arnyekesszencia">251-es rejtvény megoldása</option>
+  <option value="sors-istenno">11-es rejtvény megoldása</option>
+  <option value="kod">62-es rejtvény megoldása</option>
+  <option value="kod2">164-es rejtvény megoldása</option>
+  <!-- További rejtvények itt -->
+</select>
       </div>
     </div>
     
@@ -225,17 +292,62 @@
     &copy; 2025 A Sötét Mágia Útvesztője /Zordán Erik - DARK FANTASY KALANDKÖNYVEK/
   </div>
 
-  <script>
+<script>
     // Oldal tartalmi adatbázis
     const pageData = {
       "sors-istenno": {
         content: `
-          <h1 class="puzzle-title">A Sors Istennőinek Rejtvénye</h1>
+          <h1 class="puzzle-title">Azonosítsd a sors istennőket!</h1>
           <div class="puzzle-box">
             <input type="text" id="left" placeholder="Ki a baloldali alak?">
             <input type="text" id="center" placeholder="Ki a középső alak?">
             <input type="text" id="right" placeholder="Ki a jobb oldali alak?">
-            <center><button onclick="checkSolution()">Ellenőrzés</button></center>
+            <div class="button-container">
+              <button onclick="checkSorsIstenno()">Ellenőrzés</button>
+            </div>
+            <div id="result"></div>
+          </div>
+        `
+      },
+      "arnyekesszencia": {
+        content: `
+          
+          <h1 class="puzzle-title">Hogyan tudsz négy varázslatot úgy létrehozni, hogy csak mindössze 12 cseppnyi esszenciád van?</h1>
+          <div class="puzzle-box">
+             
+			 
+            <input type="text" id="solution" placeholder="Írd be a megoldásod...">
+            <div class="button-container">
+              <button onclick="checkArnyekesszencia()">Ellenőrzés</button>
+            </div>
+            <div id="result"></div>
+          </div>
+        `
+      },
+      "kod": {
+        content: `
+          <h1 class="puzzle-title">Kódfejtő</h1>
+          <div class="puzzle-box">
+             <h2>Add meg a helyes kódot:</h2>
+			 
+            <input type="text" id="code" placeholder="Írd be a kódot...">
+            <div class="button-container">
+              <button onclick="checkCode()">Ellenőrzés</button>
+            </div>
+            <div id="result"></div>
+          </div>
+        `
+      },
+      "kod2": {
+        content: `
+          <h1 class="puzzle-title">Második Kódfejtő</h1>
+          <div class="puzzle-box">
+             <h2>Add meg a helyes kódot:</h2>
+			 
+            <input type="text" id="code2" placeholder="Írd be a kódot...">
+            <div class="button-container">
+              <button onclick="checkCode2()">Ellenőrzés</button>
+            </div>
             <div id="result"></div>
           </div>
         `
@@ -244,11 +356,18 @@
     };
     
     // Oldal betöltése
-    function loadPage() {
-      let pageId = getUrlParameter('puzzle');
+    function loadPage(fromSelect = false) {
+      let pageId;
       
-      if (!pageId) {
+      if (fromSelect) {
+        // Ha a legördülő menüből jön a hívás, mindig a legördülő értékét használjuk
         pageId = document.getElementById('page-select').value;
+      } else {
+        // Egyébként az URL-ből próbáljuk beolvasni, vagy a legördülő menü értékét használjuk
+        pageId = getUrlParameter('puzzle');
+        if (!pageId) {
+          pageId = document.getElementById('page-select').value;
+        }
       }
       
       if (pageId && pageData[pageId]) {
@@ -269,7 +388,7 @@
     }
     
     // Sors Istennői megoldásellenőrzés
-    function checkSolution() {
+    function checkSorsIstenno() {
       const left = document.getElementById('left').value.trim().toLowerCase();
       const center = document.getElementById('center').value.trim().toLowerCase();
       const right = document.getElementById('right').value.trim().toLowerCase();
@@ -282,8 +401,115 @@
       }
     }
     
+    // Árnyékesszencia megoldásellenőrzés
+    function checkArnyekesszencia() {
+      const solution = document.getElementById('solution').value.trim().toLowerCase();
+      const result = document.getElementById('result');
+      
+      // Elfogadható megoldások listája
+      const acceptableSolutions = [
+        'kölcsönvétel', 
+        'kölcsönveszek', 
+        'kölcsön', 
+        'kölcsönzés',
+        'kölcsönveszem',
+        'lopás',
+        'ellopom',
+        'elvenni',
+        'elveszek',
+        'elveszem',
+        'kölcsön veszek egyet',
+        'kölcsönkérek egyet',
+        'kérek egyet kölcsön',
+        'elveszek egyet',
+        'átveszek egyet',
+        'használatba veszek egyet',
+        'kölcsönzök egyet',
+        'ideiglenesen használok egyet',
+        'ellopok egyet',
+        'elcsórok egyet',
+        'elcsenem egyet',
+        'eltulajdonítok egyet',
+        'meglovasítok egyet',
+        'lenyúlok egyet',
+        'elkötök egyet',
+        'zsebre vágok egyet',
+        'elemelok egyet',
+        'megfújok egyet',
+        'egyet elveszek',
+        'fogok egyet',
+        'veszek egyet',
+        'magamhoz veszek egyet',
+        'elhozok egyet',
+        'megszerzek egyet',
+        'kiveszek egyet',
+        'elcsípek egyet',
+        'lecsapok egyre',
+        'elkobzok egyet',
+        'lefoglalok egyet'
+      ];
+      
+      if (acceptableSolutions.some(s => solution.includes(s))) {
+        result.innerHTML = '<span style="color: #4CAF50;">Helyes válasz! Azonnal érzed, hogy a Tanács elégedett a döntéseddel. Lapozz a 182. oldalra!</span>';
+      } else {
+        result.innerHTML = '<span style="color: #f44336;">Helytelen válasz. Az árnyak közelebb húzódnak... Gondold újra!</span>';
+      }
+    }
+
+   
+   // Első kódfejtő függvény (25-ös kód)
+    function checkCode() {
+        const code = document.getElementById('code').value;
+        const result = document.getElementById('result');
+        
+        // Itt állítsd be a helyes kódot
+        if (code === "25") {
+            result.innerHTML = '<span style="color: #4CAF50;">Helyes! Lapozz a [209]-re a következő fejezethez!</span>';
+        } else {
+            result.innerHTML = '<span style="color: #f44336;">Helytelen válasz. Próbáld újra!</span>';
+        }
+    }
+    
+    // Második kódfejtő függvény (6-os kód)
+    function checkCode2() {
+        const code = document.getElementById('code2').value;
+        const result = document.getElementById('result');
+        
+        // Itt állítsd be a helyes kódot
+        if (code === "6") {
+            result.innerHTML = '<span style="color: #4CAF50;">Helyes! Lapozz a [113]-ra a következő fejezethez!</span>';
+        } else {
+            result.innerHTML = '<span style="color: #f44336;">Helytelen válasz. Veszítesz 3 ÉP-t! Próbáld újra!</span>';
+        }
+    }
+    
+    // Enter lenyomására is ellenőrizzen
+    document.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        const currentPuzzle = document.getElementById('page-select').value;
+        
+        if (currentPuzzle === 'sors-istenno') {
+          checkSorsIstenno();
+        } else if (currentPuzzle === 'arnyekesszencia') {
+          checkArnyekesszencia();
+        } else if (currentPuzzle === 'kod') {
+          checkCode();
+        } else if (currentPuzzle === 'kod2') {
+          checkCode2();
+        }
+      }
+    });
+    
     // Oldal inicializálása
-    document.addEventListener('DOMContentLoaded', loadPage);
+    document.addEventListener('DOMContentLoaded', function() {
+      // Eseménykezelő a legördülő menühöz
+      document.getElementById('page-select').addEventListener('change', function() {
+        loadPage(true); // true paraméterrel jelezzük, hogy a legördülő menüből jön a hívás
+      });
+      
+      // Kezdeti oldal betöltése
+      loadPage();
+    });
   </script>
 </body>
 </html>
