@@ -193,6 +193,53 @@
       font-size: 0.9rem;
       opacity: 0.7;
     }
+	
+	
+	.dice-stack {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin-bottom: 15px;
+  }
+  
+  .dice {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    transition: transform 0.3s ease;
+  }
+  
+  .dice-back {
+    left: 0;
+    top: 0;
+    z-index: 1;
+    transform: rotate(-10deg);
+  }
+  
+  .dice-middle {
+    left: 15px;
+    top: 5px;
+    z-index: 2;
+    transform: rotate(5deg);
+  }
+  
+  .dice-front {
+    left: 30px;
+    top: 10px;
+    z-index: 3;
+  }
+  
+  .dice-stack:hover .dice-back {
+    transform: rotate(-15deg) translateX(-5px);
+  }
+  
+  .dice-stack:hover .dice-middle {
+    transform: rotate(10deg);
+  }
+  
+  .dice-stack:hover .dice-front {
+    transform: translateX(5px);
+  }
   </style>
 </head>
 <body>
@@ -221,10 +268,13 @@
     </a>
     
     <a href="pages/dice3.html" class="menu-item">
-      <img src="images/d3.png" alt="Három kocka" onerror="this.src='images/d3.png'">
-      <h3>3 Kockás Dobás</h3>
-     
-    </a>
+  <div class="dice-stack">
+    <img src="images/d5.png" alt="Kocka 5" class="dice dice-back">
+    <img src="images/d4.png" alt="Kocka 4" class="dice dice-middle">
+    <img src="images/d3.png" alt="Kocka 3" class="dice dice-front">
+  </div>
+  <h3>3 Kockás Dobás</h3>
+</a>
     
     <a href="pages/character.html" class="menu-item">
       <img src="images/dark_knowledge.png" alt="Karakter" onerror="this.src='images/dark_knowledge.png'">
@@ -237,7 +287,7 @@
   <div class="centered-menu-item">
     <a href="pages/answer.html" class="menu-item">
       <img src="images/lapozz.png" alt="Válaszok" onerror="this.src='images/lapozz.png'" style="width: 120px; height: auto;">
-      <h3>Válaszok</h3>
+      <h3>Rejtvények</h3>
       <p>Itt adhatod meg a rejtvényekre a választ, ha offline vagy</p>
     </a>
   </div>
