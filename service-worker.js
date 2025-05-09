@@ -1,5 +1,5 @@
-// ► 1. Cache név verzió: ha módosítasz valamit, növeld pl. '…-v2'-re
-const CACHE_NAME = 'kalandkonyv-cache-v3';
+// ► 1. Cache név verzió: ha módosítasz valamit, növeld pl. '…-v4'-re
+const CACHE_NAME = 'kalandkonyv-cache-v4';
 // ► 2. Statikus fájlok (install fázisban ezeket töltjük be először)
 const STATIC_ASSETS = [
   '/',                  // start_url
