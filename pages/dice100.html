@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1-100 Kockadobás - A Sötét Mágia Útvesztője</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../common-styles.css">
+  
+  <style>
+    body {
+      background-color: #000000;
+      color: white;
+      font-family: "Palatino", "Blogger Sans";
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      flex-grow: 1;
+    }
+    
+    .title {
+      color: #91E35D;
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px rgba(54, 139, 39, 0.5);
+    }
+    
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #91E35D;
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: transform 0.3s;
+    }
+    
+    .back-link:hover {
+      transform: translateX(-5px);
+    }
+    
+    .dice-container {
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 2px solid #368B27;
+      border-radius: 10px;
+      padding: 30px;
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .dice-title {
+      font-family: "Palatino", "Blogger Sans";
+      color: white;
+      background-color: #A60212;
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+    }
+    
+    .dice-button {
+      padding: 12px 30px;
+      margin: 20px 0;
+      background-color: #A60212;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-family: "Palatino", "Blogger Sans";
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 10px rgba(166, 2, 18, 0.5);
+    }
+    
+    .dice-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(166, 2, 18, 0.7);
+    }
+    
+    .dice-results {
+      min-height: 140px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 20px 0;
+    }
+    
+    .dice-number {
+      width: 140px;
+      height: 140px;
+      background-color: #A60212;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Palatino", "Blogger Sans";
+      font-size: 3.5rem;
+      font-weight: 700;
+      border-radius: 15px;
+      border: 3px solid #368B27;
+      box-shadow: 0 0 20px rgba(54, 139, 39, 0.6);
+      text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+      animation: pop 0.4s ease-out;
+    }
+    
+    @keyframes pop {
+      0%   { transform: scale(0.3); opacity: 0; }
+      60%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+    
+    .description {
+      margin-top: 20px;
+      line-height: 1.6;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../index.html" class="back-link">← Vissza a főoldalra</a>
+    
+    <h1 class="title">1-100 Kockadobás</h1>
+    
+    <div class="dice-container">
+      <h2 class="dice-title">1D100 Kockadobás</h2>
+      
+      <div class="description">
+        Egy százoldalú kockadobás (percentál), amely 1-től 100-ig ad eredményt.
+      </div>
+      
+      <button onclick="rollDice()" class="dice-button">
+        Dobás
+      </button>
+      
+      <div class="dice-results" id="dice-result">
+        <!-- Itt jelenik meg a dobás eredménye -->
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    &copy; 2025 A Sötét Mágia Útvesztője /Zordán Erik - DARK FANTASY KALANDKÖNYVEK/
+  </div>
+
+  <script>
+    function rollDice() {
+      const diceContainer = document.getElementById('dice-result');
+      diceContainer.innerHTML = '';
+      diceContainer.style.opacity = 0.5;
+      
+      setTimeout(() => {
+        // 1D100 dobás
+        const roll = Math.floor(Math.random() * 100) + 1;
+        
+        const numberBox = document.createElement('div');
+        numberBox.className = 'dice-number';
+        numberBox.textContent = roll;
+        numberBox.setAttribute('aria-label', `Kocka: ${roll}`);
+        
+        diceContainer.appendChild(numberBox);
+        diceContainer.style.opacity = 1;
+      }, 300);
+    }
+  </script>
+</body>
+</html>
