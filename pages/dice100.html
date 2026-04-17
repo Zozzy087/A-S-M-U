@@ -94,6 +94,37 @@
       align-items: center;
       margin: 20px 0;
     }
+
+.dice-rolling {
+  width: 140px;
+  height: 140px;
+  background-color: #2a2a2a;
+  color: #91E35D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Palatino", "Blogger Sans";
+  font-size: 3rem;
+  font-weight: 700;
+  border-radius: 15px;
+  border: 3px dashed #368B27;
+  opacity: 0.85;
+  animation: shake 0.15s infinite;
+}
+
+@keyframes shake {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-2px, 1px); }
+  50%  { transform: translate(2px, -1px); }
+  75%  { transform: translate(-1px, -2px); }
+  100% { transform: translate(1px, 2px); }
+}
+
+.dice-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
     
     .dice-number {
       width: 140px;
@@ -164,23 +195,44 @@
 
   <script>
     function rollDice() {
-      const diceContainer = document.getElementById('dice-result');
-      diceContainer.innerHTML = '';
-      diceContainer.style.opacity = 0.5;
-      
-      setTimeout(() => {
-        // 1D100 dobás
-        const roll = Math.floor(Math.random() * 100) + 1;
-        
-        const numberBox = document.createElement('div');
-        numberBox.className = 'dice-number';
-        numberBox.textContent = roll;
-        numberBox.setAttribute('aria-label', `Kocka: ${roll}`);
-        
-        diceContainer.appendChild(numberBox);
-        diceContainer.style.opacity = 1;
-      }, 300);
-    }
+  const diceContainer = document.getElementById('dice-result');
+  const button = document.querySelector('.dice-button');
+  
+  // Gomb letiltása dobás közben
+  button.disabled = true;
+  button.textContent = 'Dobás folyamatban...';
+  
+  diceContainer.innerHTML = '';
+  diceContainer.style.opacity = 1;
+  
+  // Pörgő animációs doboz
+  const rollingBox = document.createElement('div');
+  rollingBox.className = 'dice-rolling';
+  rollingBox.textContent = '?';
+  diceContainer.appendChild(rollingBox);
+  
+  // Gyorsan váltakozó random számok az animáció alatt
+  const rollInterval = setInterval(() => {
+    rollingBox.textContent = Math.floor(Math.random() * 100) + 1;
+  }, 80);
+  
+  // Végleges eredmény 8 másodperc múlva
+  setTimeout(() => {
+    clearInterval(rollInterval);
+    diceContainer.innerHTML = '';
+    
+    const roll = Math.floor(Math.random() * 100) + 1;
+    const numberBox = document.createElement('div');
+    numberBox.className = 'dice-number';
+    numberBox.textContent = roll;
+    numberBox.setAttribute('aria-label', `Kocka: ${roll}`);
+    diceContainer.appendChild(numberBox);
+    
+    // Gomb visszaaktiválása
+    button.disabled = false;
+    button.textContent = 'Dobás';
+  }, 8000);
+}
   </script>
 </body>
 </html>
